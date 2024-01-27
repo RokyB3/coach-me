@@ -28,6 +28,8 @@ class camera: # class for the camera, so that we can use it to display the camer
             self.imgRGB = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
             #self.results = self.detector.process(self.imgRGB)
             self.img = self.find_Pose(self.img)
+            if self.results.pose_landmarks:
+                self.handle_lunge()
             cv2.imshow("Image", self.img)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -43,31 +45,67 @@ class camera: # class for the camera, so that we can use it to display the camer
                                            self.mpPose.POSE_CONNECTIONS)
                 
         return img
+    
+    def get_xyz(self, landmark):
+        return [landmark.x, landmark.y, landmark.z]
 
-    def calculate_angle(self, a, b, c):
+    def calculate_3d_angle(self, a, b, c):
         a = np.array(a)
         b = np.array(b)
         c = np.array(c)
-        
-        radians = np.arctan2(c[1]-b[1], c[0]-b[0]) - np.arctan2(a[1]-b[1], a[0]-b[0])
-        angle = np.abs(radians*180.0/np.pi)
-        
-        if angle > 180.0:
-            angle = 360-angle
-            
-        return angle
+        # Create vectors
+        vector_ab = b - a
+        vector_cb = b - c
+        # Dot product
+        dot_product = np.dot(vector_ab, vector_cb)
+        # Magnitude
+        magnitude_ab = np.linalg.norm(vector_ab)
+        magnitude_cb = np.linalg.norm(vector_cb)
+        # Cos angle
+        cos_angle = dot_product / (magnitude_ab * magnitude_cb)
+
+        # Avoiding possible numerical issues with arccos
+        cos_angle = np.clip(cos_angle, -1, 1)
+
+        # Angle in radians
+        angle_radians = np.arccos(cos_angle)
+
+        # Convert to degrees
+        angle_degrees = np.degrees(angle_radians)
+
+        return angle_degrees
+
+    def get_xy_distance(self, a, b):
+        a = np.array(a)
+        b = np.array(b)
+        # Create vectors
+        vector_ab = b - a
+        # Magnitude
+        magnitude_ab = np.linalg.norm(vector_ab[0:3:2])
+        return magnitude_ab
 
     def handle_lunge(self):
-        self.l_s = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_SHOULDER]
-        self.l_hi = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_HIP]
-        self.l_k = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_KNEE]
-        self.l_a = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_ANKLE]
-        self.r_s = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_SHOULDER]
-        self.r_hi = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_HIP]
-        self.r_k = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_KNEE]
-        self.r_a = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_ANKLE]
+        # Landmarks
+        self.l_s = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_SHOULDER])
+        self.l_hi = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_HIP])
+        self.l_k = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_KNEE])
+        self.l_a = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_ANKLE])
+        self.r_s = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_SHOULDER])
+        self.r_hi = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_HIP])
+        self.r_k = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_KNEE])
+        self.r_a = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_ANKLE])
+
+        # Back translation
+        self.l_back = self.get_xy_distance(self.l_s, self.l_hi)
+        self.r_back = self.get_xy_distance(self.r_s, self.r_hi)
+
+        # Angles
+        self.la0 = self.calculate_3d_angle(self.l_s, self.l_hi, self.l_k) # Hip angle (left)
+        self.la1 = self.calculate_3d_angle(self.l_hi, self.l_k, self.l_a) # Knee angle (left)
+        self.ra0 = self.calculate_3d_angle(self.r_s, self.r_hi, self.r_k) # Hip angle (right)
+        self.ra1 = self.calculate_3d_angle(self.r_hi, self.r_k, self.r_a) # Knee angle (right)
         
-        
+        print(f"L_Back: {self.l_back}   |   R_Back: {self.r_back}")
         
 
 if __name__ == "__main__":
