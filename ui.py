@@ -2,20 +2,20 @@ import sys
 
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QPushButton, QHBoxLayout
-from PyQt5.QtGui import QPixmap, QFont, QPainter, QColor
+from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
-import tkinter as tk
-
-root = tk.Tk()
-screen_width = root.winfo_screenwidth()
-screen_height = root.winfo_screenheight()
 import numpy as np
 import cv2
 import mediapipe as mp
+import tkinter as tk
 
 BACKGROUND_COLOR = "#71B48D"
 PRIMARY_COLOR = "#86CB92"
 SECONDARY_COLOR = "#F2F2F2"
+
+root = tk.Tk()
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
 
 class VideoThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
@@ -86,7 +86,6 @@ class VideoThread(QThread):
         self.r_hi = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_HIP]
         self.r_k = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_KNEE]
         self.r_a = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_ANKLE]
-
 class MicrophoneWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -182,4 +181,4 @@ if __name__=="__main__":
     app = QApplication(sys.argv)
     a = App()
     a.show()
-    sys.exit(app.exec_())
+    sys.ex
