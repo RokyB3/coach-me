@@ -5,12 +5,19 @@ opencv-python
 mediapipe
 
 ## Functionality
+
 -> Real-time TTS pose feedback corrections.
+
 -> Several models for pose checking.
+  
   -> Squat
+  
   -> Pull Up
+  
   -> Lunge
+  
   -> Plank
+
 -> STT connected with llm for asking questions and receiving answers.
 
 # Implementation
