@@ -105,7 +105,21 @@ class camera: # class for the camera, so that we can use it to display the camer
         self.ra0 = self.calculate_3d_angle(self.r_s, self.r_hi, self.r_k) # Hip angle (right)
         self.ra1 = self.calculate_3d_angle(self.r_hi, self.r_k, self.r_a) # Knee angle (right)
         
-        print(f"L_Back: {self.l_back}   |   R_Back: {self.r_back}")
+        # print(f"L_Back: {self.l_back}   |   R_Back: {self.r_back}")
+        # print(f"L Hip angle: {self.la0}   |   R Hip angle: {self.ra0}")
+        # print(f"L Knee angle: {self.la1}   |   R Knee angle: {self.ra1}")
+
+        # Check if back is straight
+        if self.l_back < 0.1 and self.r_back < 0.1:
+            print("Back is straight")
+        else:
+            print("Back is not straight")
+            
+        # Check left lunge
+
+        # Check right lunge
+
+
         
 
 if __name__ == "__main__":
