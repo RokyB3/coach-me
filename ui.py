@@ -3,11 +3,16 @@ import sys
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QPushButton, QHBoxLayout
 from PyQt5.QtGui import QPixmap, QFont, QPainter, QColor
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread, pyqtSignal
+import sys
+sys.path.append('src/py/pipeline')
+from pipeline import getResponseFromInput
 import numpy as np
 import cv2
 import mediapipe as mp
 import tkinter as tk
+import sounddevice as sd
+import soundfile as sf
 
 BACKGROUND_COLOR = "#71B48D"
 PRIMARY_COLOR = "#86CB92"
@@ -86,11 +91,15 @@ class VideoThread(QThread):
         self.r_hi = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_HIP]
         self.r_k = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_KNEE]
         self.r_a = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_ANKLE]
+        
 class MicrophoneWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setMinimumSize(200, 200)  # Set minimum size for the widget
-
+        self.image=QPixmap("assets/microphone.png")
+        self.recordingThread=None
+        self.recording=False
+        
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)  # Enable antialiasing
@@ -104,14 +113,56 @@ class MicrophoneWidget(QWidget):
         circle_x = (widget_width - circle_diameter) / 2
         circle_y = (widget_height - circle_diameter) / 2
 
-        # Draw the circle
-        painter.setBrush(QColor(255, 0, 0))  # Red color
+        image_width = int(min(widget_width, widget_height) / 2)
+        image_height = int(min(widget_width, widget_height) / 2)
+        image_x = int((widget_width - image_width) / 2)
+        image_y = int((widget_height - image_height) / 2)
+        painter.drawPixmap(image_x, image_y, image_width, image_height, self.image)
+        
+        color = QColor(0, 255, 0) if self.recording else QColor(255, 0, 0)
+        painter.setBrush(color)  # Green if recording, red otherwise
         painter.drawEllipse(int(circle_x), int(circle_y), circle_diameter, circle_diameter)
-    
+
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            print("Widget clicked!")
+            self.recording = not self.recording  # Toggle recording status
+            if self.recording:
+                self.recordingThread = RecordingThread(self)
+                self.recordingThread.finished.connect(self.onThreadEnded())
+                self.recordingThread.start()
+            else:
+                if self.recordingThread:
+                    self.recordingThread.stop()
+
+        self.update()
         
+    def onThreadEnded(self):
+        print("test")
+        
+class RecordingThread(QThread):
+    finished=pyqtSignal()
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.recording=True
+        
+    def run(self):
+        filename = 'audio/input/input.wav'
+
+        duration = 5 
+
+        audio_data = sd.rec(int(duration * 44100), samplerate=44100, channels=2, dtype='int16')
+        sd.wait() 
+
+        sf.write(filename, audio_data, samplerate=44100)
+
+        getResponseFromInput("input.wav")
+        
+        self.finished.emit()
+    
+    def stop(self):
+        print("recording stopped")
+        self.recording=False 
+
 class App(QWidget):
     def __init__(self):
         super().__init__()

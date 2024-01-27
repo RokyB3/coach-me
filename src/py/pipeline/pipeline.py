@@ -2,10 +2,10 @@ from openai import OpenAI
 from pathlib import Path
 import os
 
-client = OpenAI(api_key="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")
+client = OpenAI(api_key="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")
 
 def whisperTranscript(filename): 
-  audio_file= open("../../audio/input/"+filename, "rb")
+  audio_file= open("audio/input/"+filename, "rb")
   transcript = client.audio.transcriptions.create(
     model="whisper-1", 
     file=audio_file,
@@ -23,7 +23,7 @@ def gptResponse(transcript_text):
     return response_message
   
 def tts(gptResponse):
-  speech_file_path = "../../audio/output/prompt-output.mp3"
+  speech_file_path = "audio/output/prompt-output.mp3"
   response = client.audio.speech.create(
     model="tts-1",
     voice="shimmer",
