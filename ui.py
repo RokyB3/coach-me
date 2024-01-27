@@ -2,7 +2,7 @@ import sys
 
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QPushButton, QHBoxLayout
-from PyQt5.QtGui import QPixmap, QFont
+from PyQt5.QtGui import QPixmap, QFont, QPainter, QColor
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
 import numpy as np
 import cv2
@@ -147,7 +147,6 @@ class App(QWidget):
 
         hbox = QHBoxLayout()
         hbox.addWidget(self.image_label)
-        hbox.addWidget(self.button)
         hbox.addWidget(self.microphoneWidget)
         vbox.addLayout(hbox)
         # set the vbox layout as the widgets layout
@@ -181,4 +180,4 @@ if __name__=="__main__":
     app = QApplication(sys.argv)
     a = App()
     a.show()
-    sys.ex
+    sys.exit(app.exec_())
