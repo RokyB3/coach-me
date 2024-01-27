@@ -25,25 +25,79 @@ class camera: # class for the camera, so that we can use it to display the camer
             if not ret:
                 print("Failed to grab frame")
                 break
-            self.imgRGB = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
-            #self.results = self.detector.process(self.imgRGB)
-            self.img = self.find_Pose(self.img)
-            cv2.imshow("Image", self.img)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+
+            self.imgRGB = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB) # convert the image to RGB
+            self.get_landmarks() # get the landmarks of the person in the camera
+
+            self.img = self.draw_Pose(self.img) # draw the landmarks that we got from get_landmarks
+            cv2.imshow("Image", self.img) # display the image
+
+            if cv2.waitKey(1) & 0xFF == ord('q'): # if the user presses q, then 
                 break
+
         self.cap.release()
         cv2.destroyAllWindows()
         return
-    
-    def find_Pose (self, img, draw=True):
-        self.results = self.pose.process(self.imgRGB)
+        
+    def draw_Pose (self, img, draw=True):
         if self.results.pose_landmarks:
             if draw:
-                self.mpDraw.draw_landmarks(img,self.results.pose_landmarks,
-                                           self.mpPose.POSE_CONNECTIONS)
-                
+                # Landmarks excluding the face
+                selected_landmarks = set(range(11, 33))  # This includes shoulders to feet
+
+                # Draw the landmarks
+                for id, lm in enumerate(self.results.pose_landmarks.landmark):
+                    if id in selected_landmarks:
+                        h, w, c = img.shape
+                        cx, cy = int(lm.x * w), int(lm.y * h)
+                        cv2.circle(img, (cx, cy), 5, (0, 0, 0), cv2.FILLED)
+
+                # Draw the connections
+                for connection in self.mpPose.POSE_CONNECTIONS:
+                    if connection[0] in selected_landmarks and connection[1] in selected_landmarks:
+                        start_landmark = self.results.pose_landmarks.landmark[connection[0]]
+                        end_landmark = self.results.pose_landmarks.landmark[connection[1]]
+                        start_point = (int(start_landmark.x * w), int(start_landmark.y * h))
+                        end_point = (int(end_landmark.x * w), int(end_landmark.y * h))
+                        cv2.line(img, start_point, end_point, (255, 0, 0), 2)
+                    
         return img
-        
+     
+    def get_landmarks(self): # gets the landmarks from the camera
+        self.results = self.pose.process(self.imgRGB)
+
+        # get the landmarks of the person in the camera
+        if self.results.pose_landmarks:
+            self.l_s = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_SHOULDER])
+            self.l_hi = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_HIP])
+            self.l_k = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_KNEE])
+            self.l_a = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_ANKLE])
+            self.l_e = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_ELBOW])
+            self.l_w = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_WRIST])
+            self.l_he = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_HEEL])
+            self.r_s = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_SHOULDER])
+            self.r_hi = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_HIP])
+            self.r_k = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_KNEE])
+            self.r_a = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_ANKLE])
+            self.r_e = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_ELBOW])
+            self.r_w = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_WRIST])
+            self.r_he = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_HEEL])
+
+            # create a list of all the landmarks
+            self.landmark_list = [self.l_s, self.l_hi, self.l_k, self.l_a, self.l_e, self.l_w, self.l_he,
+                          self.r_s, self.r_hi, self.r_k, self.r_a, self.r_e, self.r_w, self.r_he]
+
+    def get_xyz(self, landmark): # gets the x, y, and z coordinates of a landmark
+        return [landmark.x, landmark.y, landmark.z]
+    
+    def get_xy_distance(self, a, b): # gets the distance between two landmarks in the x and y directions
+        a = np.array(a)
+        b = np.array(b)
+        # Create vectors
+        vector_ab = b - a
+        # Magnitude
+        magnitude_ab = np.linalg.norm(vector_ab[0:3:2])
+        return magnitude_ab
 
 if __name__ == "__main__":
     cam = camera()
