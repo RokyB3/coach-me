@@ -2,8 +2,13 @@ import sys
 
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QPushButton, QHBoxLayout
-from PyQt5.QtGui import QPixmap, QFont
+from PyQt5.QtGui import QPixmap, QFont, QPainter, QColor
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
+import tkinter as tk
+
+root = tk.Tk()
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
 import numpy as np
 import cv2
 
@@ -22,13 +27,39 @@ class VideoThread(QThread):
             if ret:
                 self.change_pixmap_signal.emit(cv_img)
 
+class MicrophoneWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMinimumSize(200, 200)  # Set minimum size for the widget
 
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)  # Enable antialiasing
+
+        # Get the dimensions of the widget
+        widget_width = self.width()
+        widget_height = self.height()
+
+        # Set the circle's properties
+        circle_diameter = min(widget_width, widget_height) - 20  # Adjust for padding
+        circle_x = (widget_width - circle_diameter) / 2
+        circle_y = (widget_height - circle_diameter) / 2
+
+        # Draw the circle
+        painter.setBrush(QColor(255, 0, 0))  # Red color
+        painter.drawEllipse(int(circle_x), int(circle_y), circle_diameter, circle_diameter)
+    
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            print("Widget clicked!")
+        
 class App(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Qt live label demo")
-        self.disply_width = 720
-        self.display_height = 480
+        self.setWindowTitle("Coach-me")
+        self.disply_width = screen_width
+        self.display_height = screen_height
+        self.showMaximized()
         self.setStyleSheet("background-color: {};".format(BACKGROUND_COLOR))
 
         # create the label that holds the image
@@ -49,7 +80,7 @@ class App(QWidget):
         """)
 
         self.button = QPushButton('Start', self)
-
+        self.microphoneWidget=MicrophoneWidget()
 
         # create a vertical box layout and add the two labels
         vbox = QVBoxLayout()
@@ -58,7 +89,7 @@ class App(QWidget):
         hbox = QHBoxLayout()
         hbox.addWidget(self.image_label)
         hbox.addWidget(self.button)
-
+        hbox.addWidget(self.microphoneWidget)
         vbox.addLayout(hbox)
         # set the vbox layout as the widgets layout
         self.setLayout(vbox)
