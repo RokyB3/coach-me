@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+import time
 
 class camera: # class for the camera, so that we can use it to display the camera and get all the joints from it
     def __init__(self):
@@ -17,7 +18,7 @@ class camera: # class for the camera, so that we can use it to display the camer
         self.mpPose = mp.solutions.pose
         self.pose = self.mpPose.Pose(False, 1, True,
                                      False, True,
-                                     0.5, 0.5)
+                                     0.7, 0.7)
 
     def display_camera(self): # displays the camera
         while self.cap.isOpened():
@@ -45,6 +46,19 @@ class camera: # class for the camera, so that we can use it to display the camer
                                            self.mpPose.POSE_CONNECTIONS)
                 
         return img
+    
+    def findPosition(self, img, draw=True):
+        lmList = []
+        if self.results.pose_landmarks:
+            for id, lm in enumerate(self.results.pose_landmarks.landmark):
+                #finding height, width of the image printed
+                h, w, c = img.shape
+                #Determining the pixels of the landmarks
+                cx, cy = int(lm.x * w), int(lm.y * h)
+                lmList.append([id, cx, cy])
+                if draw:
+                    cv2.circle(img, (cx, cy), 5, (255,0,0), cv2.FILLED)
+        return lmList
     
     def get_xyz(self, landmark):
         return [landmark.x, landmark.y, landmark.z]
