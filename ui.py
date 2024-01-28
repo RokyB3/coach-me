@@ -98,7 +98,13 @@ class MicrophoneWidget(QWidget):
         self.recordingThread=None
         self.recording=False
         self.container=container
-
+        self.setStyleSheet=("""
+                MicrophoneWidget {
+                border-radius: 5px; 
+                border: 6px solid #FEFEFE;
+                background: #86CB92;
+            }
+        """)
         self.screen = QDesktopWidget().screenGeometry()
         
     def paintEvent(self, event):
@@ -212,18 +218,10 @@ class App(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Coach.me")
-        self.disply_width = QDesktopWidget().screenGeometry().width()
-        self.display_height = QDesktopWidget().screenGeometry().height()
+        self.display_width = int(6*(QDesktopWidget().screenGeometry().width())/10)
+        self.display_height = int(8*(QDesktopWidget().screenGeometry().height())/10)
         self.showMaximized()
         self.setStyleSheet("background-color: {};".format(BACKGROUND_COLOR))
-
-        # create the label that holds the image
-        self.image_label = QLabel(self)
-        self.image_label.resize(self.disply_width, self.display_height)
-        self.image_label.setStyleSheet("""
-            border: 6px solid white;
-            border-radius: 16px;
-        """)
 
         # create a text label
         self.textLabel = QLabel('Coach.me')
@@ -244,6 +242,12 @@ class App(QWidget):
         vbox.addWidget(self.textLabel)
 
         hbox = QHBoxLayout()
+        # create the label that holds the image
+        self.image_label = QLabel(self)
+        self.image_label.setStyleSheet("""
+            border: 6px solid white;
+            border-radius: 16px;
+        """)
         hbox.addWidget(self.image_label)
         buttonvbox= QVBoxLayout()
         hbox.addLayout(buttonvbox)
@@ -286,7 +290,7 @@ class App(QWidget):
         h, w, ch = rgb_image.shape
         bytes_per_line = ch * w
         convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-        p = convert_to_Qt_format.scaled(self.disply_width, self.display_height, Qt.KeepAspectRatio)
+        p = convert_to_Qt_format.scaled(self.display_width, self.display_height, Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
 
 if __name__=="__main__":
