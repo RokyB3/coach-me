@@ -1,8 +1,9 @@
 from openai import OpenAI
 from pathlib import Path
 import os
+import time
 
-client = OpenAI(api_key="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")
+client = OpenAI(api_key="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")
 
 def whisperTranscript(filename): 
   audio_file= open("audio/input/"+filename, "rb")
@@ -16,7 +17,7 @@ def gptResponse(transcript_text):
     response = client.chat.completions.create(
     model="gpt-4-0125-preview",
     messages=[
-        {"role": "user", "content": transcript_text+"Do it in 3 sentences or less. If it's not a fitness or exercise related prompt, do not answer and tell us to give a fitness related prompt."},
+        {"role": "user", "content": transcript_text+"Do it in less than 2 sentences."},
     ]
     )
     response_message=(response.choices[0].message.content)
@@ -33,6 +34,12 @@ def tts(gptResponse):
   response.write_to_file(speech_file_path)
   
 def getResponseFromInput(filename): #This costs me money every time it runs, do not run it too much. :(
+    seconds=time.time()
     transcriptedText=whisperTranscript(filename)
+    print(time.time()-seconds)
+    seconds=time.time()
     response=gptResponse(transcriptedText.text)
+    print(time.time()-seconds)
+    seconds=time.time()
     tts(response)
+    print(time.time()-seconds)

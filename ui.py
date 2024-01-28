@@ -6,7 +6,9 @@ from PyQt5.QtGui import QPixmap, QFont, QPainter, QColor
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread, pyqtSignal
 import sys
 sys.path.append('src/py/pipeline')
+sys.path.append('src/py/exercises')
 from pipeline import getResponseFromInput
+import lunges 
 import numpy as np
 import cv2
 import mediapipe as mp
@@ -94,12 +96,13 @@ class VideoThread(QThread):
         self.r_a = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_ANKLE]
         
 class MicrophoneWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, container, parent=None):
         super().__init__(parent)
         self.setMinimumSize(200, 200)  # Set minimum size for the widget
         self.image=QPixmap("assets/microphone.png")
         self.recordingThread=None
         self.recording=False
+        self.container=container
 
         self.screen = QDesktopWidget().screenGeometry()
         
@@ -132,7 +135,7 @@ class MicrophoneWidget(QWidget):
         if event.button() == Qt.LeftButton:
             self.recording = not self.recording  # Toggle recording status
             if self.recording:
-                self.recordingThread = RecordingThread(self)
+                self.recordingThread = RecordingThread(self.container, parent=self)
                 self.recordingThread.finished.connect(self.onThreadEnded)
                 self.recordingThread.start()
             else:
@@ -142,20 +145,24 @@ class MicrophoneWidget(QWidget):
         self.update()
         
     def onThreadEnded(self):
-        print("test")
+        self.recording=False
+        self.update()
         
 class RecordingThread(QThread):
     
     finished=pyqtSignal()
     
-    def __init__(self, parent=None):
+    def __init__(self, microphonewidgethbox, parent=None):
         super().__init__(parent)
         self.recording=True
+        self.microphoneWidget=parent
+        self.microphonewidgethbox=microphonewidgethbox
+        print(microphonewidgethbox)
         
     def run(self):
         input_audio = 'audio/input/input.wav'
 
-        duration = 6 
+        duration = 5
 
         audio_data = sd.rec(int(duration * 44100), samplerate=44100, channels=2, dtype='int16')
         sd.wait() 
@@ -165,10 +172,10 @@ class RecordingThread(QThread):
         getResponseFromInput("input.wav")
         
         output_audio = 'audio/output/prompt-output.mp3'
-        
+
         self.play_audio(output_audio)
         self.finished.emit()
-    
+
     def stop(self):
         print("recording stopped")
         self.recording=False 
@@ -203,7 +210,8 @@ class ExerciseButton(QPushButton):
         self.exerciseName=text
     def mousePressEvent(self, event):
         if event.button() == 1:  # Left mouse button
-            print(self.exerciseName)
+            if self.exerciseName=="lunges":
+                print("test")
             
 class App(QWidget):
     def __init__(self):
@@ -224,6 +232,7 @@ class App(QWidget):
 
         # create a text label
         self.textLabel = QLabel('Coach.me')
+        self.textLabel.setAlignment(Qt.AlignCenter)
         font = QFont('Inter', 48)
         self.textLabel.setFont(font)
         self.textLabel.setStyleSheet("""
@@ -232,7 +241,8 @@ class App(QWidget):
         """)
 
         self.button = QPushButton('Start', self)
-        self.microphoneWidget=MicrophoneWidget()
+        microphonewidgethbox=QHBoxLayout()
+        self.microphoneWidget=MicrophoneWidget(microphonewidgethbox)
 
         # create a vertical box layout and add the two labels
         vbox = QVBoxLayout()
@@ -254,7 +264,6 @@ class App(QWidget):
         situpButton=ExerciseButton("Sit-Ups")
         buttonvbox.addWidget(situpButton)
         
-        microphonewidgethbox=QHBoxLayout()
         buttonvbox.addLayout(microphonewidgethbox)
         microphonewidgethbox.addWidget(self.microphoneWidget, alignment=Qt.AlignCenter)
             
