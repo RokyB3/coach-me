@@ -201,8 +201,7 @@ class VideoThread(QThread):
 
         # Avoiding possible numerical issues with arccos
         cos_angle = np.clip(cos_angle, -1, 1)
-
-        # Angle in radians
+# Angle in radians
         angle_radians = np.arccos(cos_angle)
 
         # Convert to degrees
@@ -267,6 +266,7 @@ class VideoThread(QThread):
     def check_toes(self): # check if the toes are over the knees
         # check if z coordinate of the knees are greater than the z coordinate of the toes plus some threshold
         if  self.l_toe[2] - self.l_k[2] > 2.5 or self.r_toe[2] - self.r_k[2] > 2.5:
+        # Angle in radians:
             return True
         else:
             return False
@@ -578,14 +578,14 @@ class ExerciseButton(QPushButton):
                 border-radius: 5px; 
                 border: 6px solid #FEFEFE;
                 background: #86CB92;
-                min-height:120%;
+                min-height:100%;
             }
             QPushButton:hover { background-color: #2980b9; }
             QPushButton:pressed { background-color: #1f618d; }
         """)
         font=QFont()
         font.setFamily("Helvetica")
-        font.setPointSize(32)
+        font.setPointSize(24)
         font.setBold(True) 
         self.setFont(font)
         self.setCursor(Qt.PointingHandCursor)
@@ -602,7 +602,7 @@ class App(QWidget):
         # create a text label
         self.textLabel = QLabel('- - - - C o a c h . m e - - - -')
         self.textLabel.setAlignment(Qt.AlignCenter)
-        font = QFont('Yu Gothic', 56)
+        font = QFont('Yu Gothic', 32)
         self.textLabel.setFont(font)
         self.textLabel.setStyleSheet("""
             color: black;
