@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 import time
 
-client = OpenAI(api_key="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")
+client = OpenAI(api_key="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")
 
 def whisperTranscript(filename): 
   audio_file= open("audio/input/"+filename, "rb")

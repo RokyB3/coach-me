@@ -2,7 +2,7 @@ import sys
 
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import *
-from PyQt5.QtGui import QPixmap, QFont, QPainter, QColor
+from PyQt5.QtGui import QPixmap, QFont, QPainter, QColor, QFontDatabase
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread, pyqtSignal
 import sys
 sys.path.append('src/py/pipeline')
@@ -27,6 +27,8 @@ class VideoThread(QThread):
     def __init__(self):
         super().__init__()
         self.started = True
+        self.done = False
+        self.feedback = None
         self.counter = 0
         self.cap = cv2.VideoCapture(0)
         #self.detector = mp.pose.Pose()
@@ -123,23 +125,31 @@ class VideoThread(QThread):
             return
 
         # Check start position
-        if self.started == False:
+        if self.started == False or self.done == True:
             if self.l_hip >= min_s_angle and self.r_hip >= min_s_angle:
                 print("Start position is correct")
                 self.started = True
+                self.done = False
+                if self.feedback != None:
+                    pygame.mixer.music.load(self.feedback)
+                    pygame.mixer.music.play()
+                    self.feedback = None
                 return
 
-            # Error if not straight
-            if self.l_hip < min_s_angle or self.r_hip < min_s_angle:
-                print("Stand straight")
-                self.started = False
-                return
-        else:
+            # # Error if not straight
+            # if self.l_hip < min_s_angle or self.r_hip < min_s_angle:
+            #     print("Stand straight")
+            #     pygame.mixer.music.load('../../../audio/output/lunge_stand_straight.mp3')
+            #     pygame.mixer.music.play()
+            #     self.start = False
+            #     return
+        if self.done == False:
             # Check left lunge
             if self.l_hip <= max_r_angle and self.l_hip >= min_r_angle and self.l_knee >= min_i_angle and self.l_knee <= max_i_angle:
                 if self.r_hip >= min_s_angle and self.r_knee >= min_r_angle and self.r_knee <= max_r_angle:
                     print("Left lunge is correct")
-                    self.started = False
+                    self.feedback = 'audio/output/lunge_is_good.mp3'
+                    self.done = True
                     self.counter += 1
                     return
 
@@ -147,31 +157,26 @@ class VideoThread(QThread):
             if self.r_hip <= max_r_angle and self.r_hip >= min_r_angle and self.r_knee >= min_i_angle and self.r_knee <= max_i_angle:
                 if self.l_hip >= min_s_angle and self.l_knee >= min_r_angle and self.l_knee <= max_r_angle:
                     print("Right lunge is correct")
-                    self.started = False
+                    self.feedback = 'audio/output/lunge_is_good.mp3'
+                    self.done = True
                     self.counter += 1
                     return
-                
+            
             # Error if left foot too front
-            if self.l_hip > min_r_angle and self.l_hip < max_r_angle and self.l_knee > max_i_angle:
-                if self.r_hip > min_s_angle and self.r_knee > min_r_angle and self.r_knee < max_r_angle:
+            if self.l_hip <= max_r_angle+30 and self.l_hip >= min_r_angle-30 and self.l_knee >= min_i_angle-30 and self.l_knee <= max_i_angle+30:
+                if self.r_hip >= min_s_angle-30 and self.r_knee >= min_r_angle-30 and self.r_knee <= max_r_angle+30:
                     print("Left foot is too front")
+                    if self.feedback != 'audio/output/lunge_is_good.mp3': self.feedback = 'audio/output/lunge_too_forward.mp3'
+                    self.started = False
                     return
             
             # Error if right foot too front
-            if self.r_hip > min_r_angle and self.r_hip < max_r_angle and self.r_knee > max_i_angle:
-                if self.l_hip > min_s_angle and self.l_knee > min_r_angle and self.l_knee < max_r_angle:
+            if self.r_hip <= max_r_angle+30 and self.r_hip >= min_r_angle-30 and self.r_knee >= min_i_angle-30 and self.r_knee <= max_i_angle+30:
+                if self.l_hip >= min_s_angle-30 and self.l_knee >= min_r_angle-30 and self.l_knee <= max_r_angle+30:
                     print("Right foot is too front")
+                    if self.feedback != 'audio/output/lunge_is_good.mp3': self.feedback = 'audio/output/lunge_too_forward.mp3'
+                    self.started = False
                     return
-
-            # Check too high (Right Foot Front)
-            if self.l_knee > max_r_angle and self.r_hip > max_r_angle:
-                print("Too high")
-                return
-
-            # Check too high (Left Foot Front)
-            if self.r_knee > max_r_angle and self.l_hip > max_r_angle:
-                print("Too high")
-                return
             
     
     def handle_pullup(self):
@@ -190,29 +195,33 @@ class VideoThread(QThread):
             return
 
         # Check start position
-        if self.started == False:
+        if self.started == False or self.done == True:
             if self.l_e >= min_s_angle and self.l_s >= min_s_angle:
                 if self.r_e >= min_s_angle and self.r_s >= min_s_angle:
                     print("Start position is correct")
                     self.started = True
-                    return
+                    self.done = False
+                    if self.feedback != None:
+                        pygame.mixer.music.load(self.feedback)
+                        pygame.mixer.music.play()
+                        self.feedback = None
+                        return
 
-            # Error if not straight
-            if self.l_e < min_s_angle or self.l_s < min_s_angle or self.r_e < min_s_angle or self.r_s < min_s_angle:
-                    print("Start position is incorrect")
-                    return
-
-        else:
+        if self.done == False:
             if self.l_e <= max_i_angle and self.l_s <= max_i_angle:
                 if self.r_e <= max_i_angle and self.r_s <= max_i_angle:
                     print("Pullup is correct")
-                    self.started = False
+                    self.feedback = 'audio/output/pullup_is_good.mp3'
+                    self.done = True
                     self.counter += 1
                     return
             
             # Not high enough
-            if self.l_e > max_i_angle or self.l_s > max_i_angle or self.r_e > max_i_angle or self.r_s > max_i_angle:
+            if self.l_e <= max_i_angle+40 or self.l_s <= max_i_angle+40 or self.r_e <= max_i_angle+40 or self.r_s <= max_i_angle+40:
+                self.started = False
                 print("Pullup is not high enough")
+                if self.feedback != 'audio/output/pullup_is_good.mp3': # Don't overwrite good feedback
+                    self.feedback = 'audio/output/pullup_not_high_enough.mp3'
                 return
     
 
@@ -226,6 +235,7 @@ class MicrophoneWidget(QWidget):
         self.image=QPixmap("assets/microphone.png")
         self.recordingThread=None
         self.recording=False
+        self.generating=False
         self.setCursor(Qt.PointingHandCursor)
         self.hovering=False
         self.setStyleSheet("""
@@ -249,14 +259,14 @@ class MicrophoneWidget(QWidget):
         circle_y = (widget_height - circle_diameter) / 2
 
         color = None
-        if not self.recording and not self.hovering:
+        if self.generating:
+            color=QColor(255,255, 0)
+        elif (not self.recording) and not self.hovering:
             color=QColor(255,0,0)
-        elif self.recording and not self.hovering:
-            color=QColor(0,255,0)
-        elif not self.recording and self.hovering:
-            color=QColor(230, 0, 0)
-        elif self.recording and self.hovering:
-            color=QColor(0,230,0)
+        elif (not self.recording) and self.hovering:
+            color=QColor(230,0,0)
+        else:
+            color=QColor(0, 255, 0)
         painter.setBrush(color)  # Green if recording, red otherwise
         painter.drawEllipse(int(circle_x), int(circle_y), int(circle_diameter), int(circle_diameter)) 
         
@@ -268,27 +278,27 @@ class MicrophoneWidget(QWidget):
         
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self.recording = not self.recording  # Toggle recording status
-            if self.recording:
-                self.recordingThread = RecordingThread(parent=self)
-                self.recordingThread.finished.connect(self.onThreadEnded)
-                self.recordingThread.start()
-            else:
-                if self.recordingThread:
-                    self.recordingThread.stop()
+            if not(self.generating or self.recording):
+                self.recording = not self.recording  # Toggle recording status
+                if self.recording:
+                    self.recordingThread = RecordingThread(parent=self)
+                    self.recordingThread.finished.connect(self.onThreadEnded)
+                    self.recordingThread.start()
+                else:
+                    if self.recordingThread:
+                        self.recordingThread.stop()
 
-        self.update()
+            self.update()
 
     def enterEvent(self,event):
         self.hovering=True
         self.update()
         
-    def exitEvent(self,event):
+    def leaveEvent(self,event):
         self.hovering=False
         self.update()
         
     def onThreadEnded(self):
-        self.recording=False
         self.update()
         
 class RecordingThread(QThread):
@@ -309,11 +319,16 @@ class RecordingThread(QThread):
 
         sf.write(input_audio, audio_data, samplerate=44100)
 
+        self.microphoneWidget.recording=False
+        self.microphoneWidget.generating=True
+        self.microphoneWidget.update()
         getResponseFromInput("input.wav")
         
         output_audio = 'audio/output/prompt-output.mp3'
 
         self.play_audio(output_audio)
+        self.microphoneWidget.generating=False
+        self.microphoneWidget.update()
         self.finished.emit()
 
     def stop(self):
@@ -350,7 +365,7 @@ class ExerciseButton(QPushButton):
         """)
         font=QFont()
         font.setFamily("Helvetica")
-        font.setPointSize(12)
+        font.setPointSize(32)
         font.setBold(True) 
         self.setFont(font)
         self.setCursor(Qt.PointingHandCursor)
@@ -367,12 +382,11 @@ class App(QWidget):
         # create a text label
         self.textLabel = QLabel('Coach.me')
         self.textLabel.setAlignment(Qt.AlignCenter)
-        font = QFont('Inter', 48)
+        font = QFont('Yu Gothic', 48)
         self.textLabel.setFont(font)
         self.textLabel.setStyleSheet("""
             color: black;
             font-weight: bold; 
-            font-family: Helvetica;
             text-transform:uppercase;
         """)
 
@@ -408,7 +422,8 @@ class App(QWidget):
         microphonewidgethbox.addWidget(self.microphoneWidget, alignment=Qt.AlignCenter)
         instructionLabel=QLabel("Press to record, speak while button is green.")
         instructionLabel.setWordWrap(True)
-        instructionLabel.setStyleSheet("font-weight:bold;color:red; font-size:64px")
+        instructionLabel.setStyleSheet("font-weight:bold; color:red; font-size:48px; text-align:center;")
+        instructionLabel.setAlignment(Qt.AlignCenter)
         buttonvbox.addWidget(instructionLabel, alignment=Qt.AlignCenter)
         vbox.addLayout(hbox)
         # set the vbox layout as the widgets layout
@@ -434,8 +449,6 @@ class App(QWidget):
     def startPullup(self):
         self.thread.exercise = "pullup"
 
-
-        
     @pyqtSlot(np.ndarray)
     def update_image(self, cv_img):
         """Updates the image_label with a new opencv image"""
