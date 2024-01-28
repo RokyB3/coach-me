@@ -92,19 +92,19 @@ class squat: # class for the camera, so that we can use it to display the camera
                     print("Squat counter: ", self.squat_counter)
 
                     # play feedback
-                    pygame.mixer.music.load('../../../audio/output/squat_is_good.mp3')
+                    pygame.mixer.music.load('../../audio/output/squat_is_good.mp3')
                     pygame.mixer.music.play()
                 if self.back_backwards:
                     print("Back is too backwards enough")
                     
                     # play feedback
-                    pygame.mixer.music.load('../../../audio/output/squat_back_backward.mp3')
+                    pygame.mixer.music.load('../../audio/output/squat_back_backward.mp3')
                     pygame.mixer.music.play()
                 if self.back_forward:
                     print("Back is too forward enough") 
 
                     # play feedback
-                    pygame.mixer.music.load('../../../audio/output/squat_back_forward.mp3')
+                    pygame.mixer.music.load('../../audio/output/squat_back_forward.mp3')
                     pygame.mixer.music.play()
             
                 self.back_backwards = False
