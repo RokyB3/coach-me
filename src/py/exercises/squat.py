@@ -17,8 +17,8 @@ class squat: # class for the camera, so that we can use it to display the camera
         self.down = True
         self.up = False
         self.squat_counter = 0
-        self.back_forward= False
-        self.back_backwards = False
+        self.knees_over = False
+        self.back_forward = False
 
     def handle_squat(self): # displays the camera
         while self.cam.cap.isOpened():
@@ -67,17 +67,17 @@ class squat: # class for the camera, so that we can use it to display the camera
     
     def check_knees(self): # check if the knees are bent
         if self.down and self.l_knee_angle < low_knee_threshold and self.r_knee_angle < low_knee_threshold:
-            if 70 < self.l_hip_angle < 90 and 70 < self.r_hip_angle < 90:
+            if 85 <= self.l_hip_angle <= 100 and 85 <= self.r_hip_angle <= 100:
                 print("Correct form")
-                self.back_backwards = False
+                self.knees_over = False
                 self.back_forward = False
 
                 self.up = True
                 self.down = False
-            elif self.l_hip_angle < 70 or self.r_hip_angle < 70:
+            elif self.l_hip_angle < 85 or self.r_hip_angle < 85:
                 self.back_forward = True
-            elif self.l_hip_angle > 100 or self.r_hip_angle > 100:
-                self.back_backwards = True
+            elif self.check_toes():
+                self.knees_over = True
 
             self.up = True
             self.down = False
@@ -87,18 +87,18 @@ class squat: # class for the camera, so that we can use it to display the camera
                 print("Suffienctly straight hips and knees, go down")
                 self.up = False
                 self.down = True
-                if not self.back_backwards and not self.back_forward:
+                if not self.knees_over and not self.back_forward:
                     self.squat_counter += 1
                     print("Squat counter: ", self.squat_counter)
 
                     # play feedback
                     pygame.mixer.music.load('../../audio/output/squat_is_good.mp3')
                     pygame.mixer.music.play()
-                if self.back_backwards:
-                    print("Back is too backwards enough")
+                if self.knees_over:
+                    print("Your knees are over your toes")
                     
                     # play feedback
-                    pygame.mixer.music.load('../../audio/output/squat_back_backward.mp3')
+                    pygame.mixer.music.load('../../../audio/output/squat_toes_over.mp3')
                     pygame.mixer.music.play()
                 if self.back_forward:
                     print("Back is too forward enough") 
@@ -107,9 +107,16 @@ class squat: # class for the camera, so that we can use it to display the camera
                     pygame.mixer.music.load('../../audio/output/squat_back_forward.mp3')
                     pygame.mixer.music.play()
             
-                self.back_backwards = False
+                self.knees_over = False
                 self.back_forward = False
         return
+    
+    def check_toes(self): # check if the toes are over the knees
+        # check if z coordinate of the knees are greater than the z coordinate of the toes plus some threshold
+        if  self.cam.l_toe[2] - self.cam.l_k[2] > 0 or self.cam.r_toe[2] - self.cam.r_k[2] > 0:
+            return True
+        else:
+            return False
 
     def display_squat_count(self, img):
         # Choose a font
