@@ -94,15 +94,6 @@ class camera: # class for the camera, so that we can use it to display the camer
         
         if self.l_hip == None or self.l_knee == None or self.r_hip == None or self.r_knee == None:
             return
-        
-        # print(f"L Hip angle: {self.l_hip}   |   R Hip angle: {self.r_hip}")
-        # print(f"L Knee angle: {self.l_knee}   |   R Knee angle: {self.r_knee}")
-
-        # # Check if back is straight
-        # if self.l_back < max_b_distance and self.r_back < max_b_distance:
-        #     print("Back is straight")
-        # else:
-        #     print("Back is not straight")
 
         # Check start position
         if self.start == False:
