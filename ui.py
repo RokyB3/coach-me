@@ -54,7 +54,11 @@ class VideoThread(QThread):
             if not self.exerciseSelected:
                 font = cv2.FONT_HERSHEY_COMPLEX
                 # Position (bottom right corner)
-                bottomRightCornerOfText = (self.img.shape[1] - 500, self.img.shape[0] - 50)
+                widthHeight=self.img.shape
+                print(widthHeight)
+                print(widthHeight[0])
+                print(widthHeight[1])
+                bottomRightCornerOfText = (int((1/10)*widthHeight[1]), int((9/10)*widthHeight[0]))
                 fontScale = 1
                 fontColor = (255, 255, 255)  # White color
                 lineType = 4
@@ -390,7 +394,7 @@ class ExerciseButton(QPushButton):
             
 class App(QWidget):
     def __init__(self):
-        super().__init__()
+        super().__init__() 
         self.setWindowTitle("Coach.me")
         self.display_width = int(6*(QDesktopWidget().screenGeometry().width())/10)
         self.display_height = int(8*(QDesktopWidget().screenGeometry().height())/10)
