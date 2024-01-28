@@ -635,8 +635,8 @@ class App(QWidget):
         buttonvbox.addWidget(squatButton)
         pullupButton=ExerciseButton("- - - - Pull-Ups - - - -")
         buttonvbox.addWidget(pullupButton)
-        situpButton=ExerciseButton("- - - - Planks - - - -")
-        buttonvbox.addWidget(situpButton)
+        # situpButton=ExerciseButton("- - - - Planks - - - -")
+        # buttonvbox.addWidget(situpButton)
         
         buttonvbox.addLayout(microphonewidgethbox)
         microphonewidgethbox.addWidget(self.microphoneWidget, alignment=Qt.AlignCenter)
@@ -706,7 +706,7 @@ class App(QWidget):
                 border-radius: 5px; 
                 border: 6px solid #FEFEFE;
                 background: #86CB92;
-                min-height:120%;
+                min-height:100%;
             }
             QPushButton:hover { background-color: #2980b9; }
             QPushButton:pressed { background-color: #1f618d; }
@@ -718,7 +718,7 @@ class App(QWidget):
                 border-radius: 5px; 
                 border: 6px solid #FEFEFE;
                 background: #2980b9;
-                min-height:120%;
+                min-height:100%;
             }
             QPushButton:hover { background-color: #2980b9; }
             QPushButton:pressed { background-color: #1f618d; }
