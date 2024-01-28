@@ -24,6 +24,7 @@ BACKGROUND_COLOR = "#71B48D"
 PRIMARY_COLOR = "#86CB92"
 SECONDARY_COLOR = "#F2F2F2"
 
+a = None
 class VideoThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
 
@@ -63,6 +64,30 @@ class VideoThread(QThread):
             if not ret:
                 print("Failed to grab frame")
                 break
+
+            if gpt_exercises != [] and (self.exercise == None or self.counter >= 2):
+                self.exercise = gpt_exercises.pop(0)
+                self.counter = 0
+                self.feedback = None
+                if self.exercise == "lunge":
+                    a.startLunge()
+                    pygame.mixer.music.load('audio/output/lunges.mp3')
+                    pygame.mixer.music.play()
+                elif self.exercise == "squat":
+                    a.startSquat()
+                    pygame.mixer.music.load('audio/output/squats.mp3')
+                    pygame.mixer.music.play()
+                elif self.exercise == "pullup" or self.exercise == "pull-up":
+                    a.startPullup()
+                    pygame.mixer.music.load('audio/output/pullups.mp3')
+                    pygame.mixer.music.play()
+                    self.exercise = "pullup"
+                # elif self.exercise == "situp":
+                #     pygame.mixer.music.load('audio/output/situp.mp3')
+                #     pygame.mixer.music.play()
+                else:
+                    self.exercise = None
+                    self.feedback = None
 
             if self.exercise == None:
                 font = cv2.FONT_HERSHEY_COMPLEX
@@ -523,7 +548,8 @@ class RecordingThread(QThread):
         self.microphoneWidget.generating=False
         self.microphoneWidget.update()
 
-        for ex in ['lunge', 'squat', 'pullup']:
+        print(text)
+        for ex in ['lunge', 'squat', 'pullup', 'pull-up']:
             if ex in text.lower():
                 gpt_exercises.append(ex)
         self.finished.emit()
@@ -638,7 +664,7 @@ class App(QWidget):
         pullupButton.clicked.connect(self.startPullup)
         self.buttons = [lungeButton, squatButton, pullupButton]
     
-    def startLunge(self, thread):
+    def startLunge(self):
         self.thread.exerciseSelected=True
         self.thread.exercise = "lunge"
         self.thread.counter = 0
@@ -646,7 +672,7 @@ class App(QWidget):
             self.resetExerciseButtonColors(button)
         self.setExerciseButtonColor(self.buttons[0])
     
-    def startSquat(self, thread):
+    def startSquat(self):
         self.thread.exerciseSelected=True
         self.thread.exercise = "squat"
         self.thread.counter = 0
@@ -654,7 +680,7 @@ class App(QWidget):
             self.resetExerciseButtonColors(button)
         self.setExerciseButtonColor(self.buttons[1])
     
-    def startPullup(self, thread):
+    def startPullup(self):
         self.thread.exerciseSelected=True
         self.thread.exercise = "pullup"
         self.thread.counter = 0
