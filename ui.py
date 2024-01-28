@@ -227,6 +227,7 @@ class MicrophoneWidget(QWidget):
         self.recordingThread=None
         self.recording=False
         self.setCursor(Qt.PointingHandCursor)
+        self.hovering=False
         self.setStyleSheet("""
                 border-radius: 5px; 
                 border: 6px solid #FEFEFE;
@@ -247,7 +248,15 @@ class MicrophoneWidget(QWidget):
         circle_x = (widget_width - circle_diameter) / 2
         circle_y = (widget_height - circle_diameter) / 2
 
-        color = QColor(0, 255, 0) if self.recording else QColor(255, 0, 0)
+        color = None
+        if not self.recording and not self.hovering:
+            color=QColor(255,0,0)
+        elif self.recording and not self.hovering:
+            color=QColor(0,255,0)
+        elif not self.recording and self.hovering:
+            color=QColor(230, 0, 0)
+        elif self.recording and self.hovering:
+            color=QColor(0,230,0)
         painter.setBrush(color)  # Green if recording, red otherwise
         painter.drawEllipse(int(circle_x), int(circle_y), int(circle_diameter), int(circle_diameter)) 
         
@@ -270,6 +279,14 @@ class MicrophoneWidget(QWidget):
 
         self.update()
 
+    def enterEvent(self,event):
+        self.hovering=True
+        self.update()
+        
+    def exitEvent(self,event):
+        self.hovering=False
+        self.update()
+        
     def onThreadEnded(self):
         self.recording=False
         self.update()
@@ -353,9 +370,10 @@ class App(QWidget):
         font = QFont('Inter', 48)
         self.textLabel.setFont(font)
         self.textLabel.setStyleSheet("""
-            color: white;
-            font-weight: bold;
+            color: black;
+            font-weight: bold; 
             font-family: Helvetica;
+            text-transform:uppercase;
         """)
 
         self.button = QPushButton('Start', self)
