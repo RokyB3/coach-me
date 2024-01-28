@@ -55,9 +55,6 @@ class VideoThread(QThread):
                 font = cv2.FONT_HERSHEY_COMPLEX
                 # Position (bottom right corner)
                 widthHeight=self.img.shape
-                print(widthHeight)
-                print(widthHeight[0])
-                print(widthHeight[1])
                 bottomRightCornerOfText = (int((1/10)*widthHeight[1]), int((9/10)*widthHeight[0]))
                 fontScale = 1
                 fontColor = (255, 255, 255)  # White color
@@ -402,9 +399,9 @@ class App(QWidget):
         self.setStyleSheet("background-color: {};".format(BACKGROUND_COLOR))
 
         # create a text label
-        self.textLabel = QLabel('C o a c h.m e')
+        self.textLabel = QLabel('- - - - C o a c h . m e - - - -')
         self.textLabel.setAlignment(Qt.AlignCenter)
-        font = QFont('Yu Gothic', 48)
+        font = QFont('Yu Gothic', 56)
         self.textLabel.setFont(font)
         self.textLabel.setStyleSheet("""
             color: black;
@@ -431,13 +428,13 @@ class App(QWidget):
         buttonvbox= QVBoxLayout()
         hbox.addLayout(buttonvbox)
         
-        lungeButton=ExerciseButton("Lunges")
+        lungeButton=ExerciseButton("- - - - Lunges - - - -")
         buttonvbox.addWidget(lungeButton)
-        squatButton=ExerciseButton("Squats")
+        squatButton=ExerciseButton("- - - - Squats - - - -")
         buttonvbox.addWidget(squatButton)
-        pullupButton=ExerciseButton("Pull-Ups")
+        pullupButton=ExerciseButton("- - - - Pull-Ups - - - -")
         buttonvbox.addWidget(pullupButton)
-        situpButton=ExerciseButton("Sit-Ups")
+        situpButton=ExerciseButton("- - - - Sit-Ups - - - -")
         buttonvbox.addWidget(situpButton)
         
         buttonvbox.addLayout(microphonewidgethbox)
