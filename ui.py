@@ -594,8 +594,8 @@ class App(QWidget):
     def __init__(self):
         super().__init__() 
         self.setWindowTitle("Coach.me")
-        self.display_width = int(6*(QDesktopWidget().screenGeometry().width())/10)
-        self.display_height = int(8*(QDesktopWidget().screenGeometry().height())/10)
+        self.display_width = int(1000)
+        self.display_height = int(700)
         self.showMaximized()
         self.setStyleSheet("background-color: {};".format(BACKGROUND_COLOR))
 
