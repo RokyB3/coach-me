@@ -18,6 +18,22 @@ class camera: # class for the camera, so that we can use it to display the camer
         self.pose = self.mpPose.Pose(False, 1, True,
                                      False, True,
                                      0.5, 0.5)
+        
+        # Landmarks
+        self.l_s = (0,0,0)
+        self.l_hi = (0,0,0)
+        self.l_k = (0,0,0)
+        self.l_a = (0,0,0)
+        self.l_e = (0,0,0)
+        self.l_w = (0,0,0)
+        self.l_he = (0,0,0)
+        self.r_s = (0,0,0)
+        self.r_hi = (0,0,0)
+        self.r_k = (0,0,0)
+        self.r_a = (0,0,0)
+        self.r_e = (0,0,0)
+        self.r_w = (0,0,0)
+        self.r_he = (0,0,0)
 
     def display_camera(self): # displays the camera
         while self.cap.isOpened():
@@ -60,8 +76,33 @@ class camera: # class for the camera, so that we can use it to display the camer
                         start_point = (int(start_landmark.x * w), int(start_landmark.y * h))
                         end_point = (int(end_landmark.x * w), int(end_landmark.y * h))
                         cv2.line(img, start_point, end_point, (255, 0, 0), 2)
-                    
         return img
+    
+    def calculate_3d_angle(self, a, b, c):
+        a = np.array(a)
+        b = np.array(b)
+        c = np.array(c)
+        # Create vectors
+        vector_ab = b - a
+        vector_cb = b - c
+        # Dot product
+        dot_product = np.dot(vector_ab, vector_cb)
+        # Magnitude
+        magnitude_ab = np.linalg.norm(vector_ab)
+        magnitude_cb = np.linalg.norm(vector_cb)
+        # Cos angle
+        cos_angle = dot_product / (magnitude_ab * magnitude_cb)
+
+        # Avoiding possible numerical issues with arccos
+        cos_angle = np.clip(cos_angle, -1, 1)
+
+        # Angle in radians
+        angle_radians = np.arccos(cos_angle)
+
+        # Convert to degrees
+        angle_degrees = np.degrees(angle_radians)
+
+        return angle_degrees
      
     def get_landmarks(self): # gets the landmarks from the camera
         self.results = self.pose.process(self.imgRGB)
@@ -82,10 +123,10 @@ class camera: # class for the camera, so that we can use it to display the camer
             self.r_e = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_ELBOW])
             self.r_w = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_WRIST])
             self.r_he = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_HEEL])
-
             # create a list of all the landmarks
             self.landmark_list = [self.l_s, self.l_hi, self.l_k, self.l_a, self.l_e, self.l_w, self.l_he,
                           self.r_s, self.r_hi, self.r_k, self.r_a, self.r_e, self.r_w, self.r_he]
+            return True
 
     def get_xyz(self, landmark): # gets the x, y, and z coordinates of a landmark
         return [landmark.x, landmark.y, landmark.z]
