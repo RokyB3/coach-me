@@ -227,12 +227,10 @@ class MicrophoneWidget(QWidget):
         self.recordingThread=None
         self.recording=False
         self.setCursor(Qt.PointingHandCursor)
-        self.setStyleSheet=("""
-                MicrophoneWidget {
+        self.setStyleSheet("""
                 border-radius: 5px; 
                 border: 6px solid #FEFEFE;
                 background: #86CB92;
-            }
         """)
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         
@@ -259,7 +257,7 @@ class MicrophoneWidget(QWidget):
         image_y = int((widget_height - image_height) / 2)
         painter.drawPixmap(image_x, image_y, int(image_width), int(image_width), self.image)
         
-    def mousePressEvent(self, event):
+    def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.recording = not self.recording  # Toggle recording status
             if self.recording:
@@ -271,7 +269,7 @@ class MicrophoneWidget(QWidget):
                     self.recordingThread.stop()
 
         self.update()
-        
+
     def onThreadEnded(self):
         self.recording=False
         self.update()
@@ -330,6 +328,8 @@ class ExerciseButton(QPushButton):
                 background: #86CB92;
                 min-height:120%;
             }
+            QPushButton:hover { background-color: #2980b9; }
+            QPushButton:pressed { background-color: #1f618d; }
         """)
         font=QFont()
         font.setFamily("Helvetica")
@@ -337,11 +337,6 @@ class ExerciseButton(QPushButton):
         font.setBold(True) 
         self.setFont(font)
         self.setCursor(Qt.PointingHandCursor)
-        self.exerciseName=text
-    def mousePressEvent(self, event):
-        if event.button() == 1:  # Left mouse button
-            if self.exerciseName=="lunges":
-                print("test")
             
 class App(QWidget):
     def __init__(self):
