@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 import time
 
-client = OpenAI(api_key="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")
+client = OpenAI(api_key="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")
 
 def whisperTranscript(filename): 
   audio_file= open("audio/input/"+filename, "rb")
@@ -17,7 +17,7 @@ def gptResponse(transcript_text):
     response = client.chat.completions.create(
     model="gpt-4-0125-preview",
     messages=[
-        {"role": "user", "content": transcript_text+"Do it in less than 2 sentences."},
+        {"role": "user", "content": "You are a fitness trainer. The exercises are your disposal are the following: lunges, squats, pull-ups. Answer the following question basing yourself off what exercises we have: " + transcript_text},
     ]
     )
     response_message=(response.choices[0].message.content)
@@ -43,3 +43,4 @@ def getResponseFromInput(filename): #This costs me money every time it runs, do 
     seconds=time.time()
     tts(response)
     print(time.time()-seconds)
+    return response
