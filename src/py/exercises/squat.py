@@ -1,12 +1,15 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+import pygame
 
 # I Hate it here, I hate it here
 import sys 
 sys.path.append('../')
 from opencv.camDisplay import camera
 
+low_knee_threshold = 90
+high_knee_threshold = 120
 
 class squat: # class for the camera, so that we can use it to display the camera and get all the joints from it
     def __init__(self):
@@ -14,10 +17,16 @@ class squat: # class for the camera, so that we can use it to display the camera
         self.down = True
         self.up = False
         self.squat_counter = 0
+        self.back_forward= False
+        self.back_backwards = False
 
     def handle_squat(self): # displays the camera
         while self.cam.cap.isOpened():
             ret, self.cam.img = self.cam.cap.read()
+
+            #initialize the mixer
+            pygame.mixer.init()
+
             if not ret:
                 print("Failed to grab frame")
                 break
@@ -57,39 +66,56 @@ class squat: # class for the camera, so that we can use it to display the camera
         return        
     
     def check_knees(self): # check if the knees are bent
-        if self.down and self.l_knee_angle < 90 and self.r_knee_angle < 90:
-            print("Suffienctly bent knees")
+        if self.down and self.l_knee_angle < low_knee_threshold and self.r_knee_angle < low_knee_threshold:
             if 70 < self.l_hip_angle < 90 and 70 < self.r_hip_angle < 90:
-                print("Suffienctly bent hips and knees, go up")
+                print("Correct form")
+                self.back_backwards = False
+                self.back_forward = False
+
                 self.up = True
                 self.down = False
             elif self.l_hip_angle < 70 or self.r_hip_angle < 70:
-                print("Back is too forward enough")
-            elif self.l_hip_angle > 90 or self.r_hip_angle > 90:
-                print("Back is too backwards enough")
+                self.back_forward = True
+            elif self.l_hip_angle > 100 or self.r_hip_angle > 100:
+                self.back_backwards = True
 
-        elif self.up and self.l_knee_angle > 120 and self.r_knee_angle > 120:
-            print("Suffienctly straight knees")
+            self.up = True
+            self.down = False
+
+        elif self.up and self.l_knee_angle > 130 and self.r_knee_angle > 130:
             if self.l_hip_angle > 135 and self.r_hip_angle > 135:
                 print("Suffienctly straight hips and knees, go down")
                 self.up = False
                 self.down = True
-                self.squat_counter += 1
-                print("Squat counter: ", self.squat_counter)
-            else:
-                print("Back is not straight enough")
+                if not self.back_backwards and not self.back_forward:
+                    self.squat_counter += 1
+                    print("Squat counter: ", self.squat_counter)
+
+                    # play feedback
+                    pygame.mixer.music.load('../../../audio/output/squat_is_good.mp3')
+                    pygame.mixer.music.play()
+                if self.back_backwards:
+                    print("Back is too backwards enough")
+                    
+                    # play feedback
+                    pygame.mixer.music.load('../../../audio/output/squat_back_backward.mp3')
+                    pygame.mixer.music.play()
+                if self.back_forward:
+                    print("Back is too forward enough") 
+
+                    # play feedback
+                    pygame.mixer.music.load('../../../audio/output/squat_back_forward.mp3')
+                    pygame.mixer.music.play()
+            
+                self.back_backwards = False
+                self.back_forward = False
         return
-    
-    def check_feet(self): # check if the feet are in the correct position and the knees are not over the toes
-        if 
-        
-        
 
     def display_squat_count(self, img):
         # Choose a font
         font = cv2.FONT_HERSHEY_COMPLEX
         # Position (bottom right corner)
-        bottomRightCornerOfText = (img.shape[1] - 1864, img.shape[0] - 50)
+        bottomRightCornerOfText = (img.shape[1] - 1250, img.shape[0] - 50)
         fontScale = 2
         fontColor = (255, 255, 255)  # White color
         lineType = 4

@@ -26,74 +26,7 @@ class VideoThread(QThread):
 
     def __init__(self):
         super().__init__()
-        self.cap = cv2.VideoCapture(0)
-        #self.detector = mp.pose.Pose()
-        self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        self.results = None
-        self.img = None
-        self.imgRGB = None
-        self.lmList = None
-        self.pose = None
-        self.mpDraw = mp.solutions.drawing_utils
-        self.mpPose = mp.solutions.pose
-        self.pose = self.mpPose.Pose(False, 1, True,
-                                     False, True,
-                                     0.5, 0.5)
-
-    def run(self):
-        # capture from web cam
-        while self.cap.isOpened():
-            ret, self.img = self.cap.read()
-            if not ret:
-                print("Failed to grab frame")
-                break
-
-            self.imgRGB = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
-
-            self.img = self.find_Pose(self.img)
-
-            if ret:
-                self.change_pixmap_signal.emit(self.img)
-
-        self.cap.release()
-        cv2.destroyAllWindows()
-    
-    def find_Pose(self, img, draw=True):
-        self.results = self.pose.process(self.imgRGB)
-        if self.results.pose_landmarks:
-            if draw:
-                self.mpDraw.draw_landmarks(img,self.results.pose_landmarks,
-                                           self.mpPose.POSE_CONNECTIONS)
-                
-        return img
-    
-    def calculate_angle(self, a, b, c):
-        a = np.array(a)
-        b = np.array(b)
-        c = np.array(c)
-        
-        radians = np.arctan2(c[1]-b[1], c[0]-b[0]) - np.arctan2(a[1]-b[1], a[0]-b[0])
-        angle = np.abs(radians*180.0/np.pi)
-        
-        if angle > 180.0:
-            angle = 360-angle
-            
-        return angle
-
-    def handle_lunge(self):
-        self.l_s = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_SHOULDER]
-        self.l_hi = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_HIP]
-        self.l_k = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_KNEE]
-        self.l_a = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_ANKLE]
-        self.r_s = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_SHOULDER]
-        self.r_hi = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_HIP]
-        self.r_k = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_KNEE]
-        self.r_a = self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_ANKLE]
-
-class camera: # class for the camera, so that we can use it to display the camera and get all the joints from it
-    def __init__(self):
-        self.start = True
+        self.started = True
         self.counter = 0
         self.cap = cv2.VideoCapture(0)
         #self.detector = mp.pose.Pose()
@@ -109,8 +42,9 @@ class camera: # class for the camera, so that we can use it to display the camer
         self.pose = self.mpPose.Pose(False, 1, True,
                                      False, True,
                                      0.7, 0.7)
+        self.exercise = None
 
-    def display_camera(self): # displays the camera
+    def run(self): # displays the camera
         while self.cap.isOpened():
             ret, self.img = self.cap.read()
             if not ret:
@@ -120,12 +54,17 @@ class camera: # class for the camera, so that we can use it to display the camer
             # self.results = self.detector.process(self.img)
             self.results = self.pose.process(self.img)
             self.lms = self.get_LM_positions(self.img)
-            if self.results.pose_landmarks:
-                self.handle_pullup()
+            if ret:
+                self.change_pixmap_signal.emit(self.img)
 
-            cv2.imshow("Image", self.img)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+            if self.results.pose_landmarks:
+                if self.exercise == "lunge": self.handle_lunge()
+                elif self.exercise == "squat": self.handle_squat()
+                elif self.exercise == "pullup": self.handle_pullup()
+
+            # cv2.imshow("Image", self.img)
+            # if cv2.waitKey(1) & 0xFF == ord('q'):
+            #     break
         self.cap.release()
         cv2.destroyAllWindows()
         return
@@ -165,8 +104,118 @@ class camera: # class for the camera, so that we can use it to display the camer
         elif angle > 180:
             angle = 360 - angle
         
-        return angle 
+        return angle
+
+    def handle_lunge(self):
+        # Constants
+        min_i_angle, max_i_angle = 75, 90
+        min_r_angle, max_r_angle = 80, 100
+        min_s_angle = 160
+        # max_b_distance = 0.1
+
+        # Angles
+        self.l_hip = self.calculate_2d_angle(11, 23, 25) # Hip angle (left)
+        self.l_knee = self.calculate_2d_angle(23, 25, 27) # Knee angle (left)
+        self.r_hip = self.calculate_2d_angle(12, 24, 26) # Hip angle (right)
+        self.r_knee = self.calculate_2d_angle(24, 26, 28) # Knee angle (right)
+        
+        if self.l_hip == None or self.l_knee == None or self.r_hip == None or self.r_knee == None:
+            return
+
+        # Check start position
+        if self.started == False:
+            if self.l_hip >= min_s_angle and self.r_hip >= min_s_angle:
+                print("Start position is correct")
+                self.started = True
+                return
+
+            # Error if not straight
+            if self.l_hip < min_s_angle or self.r_hip < min_s_angle:
+                print("Stand straight")
+                self.started = False
+                return
+        else:
+            # Check left lunge
+            if self.l_hip <= max_r_angle and self.l_hip >= min_r_angle and self.l_knee >= min_i_angle and self.l_knee <= max_i_angle:
+                if self.r_hip >= min_s_angle and self.r_knee >= min_r_angle and self.r_knee <= max_r_angle:
+                    print("Left lunge is correct")
+                    self.started = False
+                    self.counter += 1
+                    return
+
+            # Check right lunge
+            if self.r_hip <= max_r_angle and self.r_hip >= min_r_angle and self.r_knee >= min_i_angle and self.r_knee <= max_i_angle:
+                if self.l_hip >= min_s_angle and self.l_knee >= min_r_angle and self.l_knee <= max_r_angle:
+                    print("Right lunge is correct")
+                    self.started = False
+                    self.counter += 1
+                    return
+                
+            # Error if left foot too front
+            if self.l_hip > min_r_angle and self.l_hip < max_r_angle and self.l_knee > max_i_angle:
+                if self.r_hip > min_s_angle and self.r_knee > min_r_angle and self.r_knee < max_r_angle:
+                    print("Left foot is too front")
+                    return
+            
+            # Error if right foot too front
+            if self.r_hip > min_r_angle and self.r_hip < max_r_angle and self.r_knee > max_i_angle:
+                if self.l_hip > min_s_angle and self.l_knee > min_r_angle and self.l_knee < max_r_angle:
+                    print("Right foot is too front")
+                    return
+
+            # Check too high (Right Foot Front)
+            if self.l_knee > max_r_angle and self.r_hip > max_r_angle:
+                print("Too high")
+                return
+
+            # Check too high (Left Foot Front)
+            if self.r_knee > max_r_angle and self.l_hip > max_r_angle:
+                print("Too high")
+                return
+            
     
+    def handle_pullup(self):
+        # Constants
+        max_i_angle = 75
+        min_s_angle = 140
+        # max_b_distance = 0.1
+
+        # Angles
+        self.l_e = self.calculate_2d_angle(12, 14, 16) # Hip angle (left)
+        self.l_s = self.calculate_2d_angle(14, 12, 24) # Knee angle (left)
+        self.r_e = self.calculate_2d_angle(11, 13, 15) # Hip angle (right)
+        self.r_s = self.calculate_2d_angle(13, 11, 23) # Knee angle (right)
+        
+        if self.l_e == None or self.l_s == None or self.r_e == None or self.r_s == None:
+            return
+
+        # Check start position
+        if self.started == False:
+            if self.l_e >= min_s_angle and self.l_s >= min_s_angle:
+                if self.r_e >= min_s_angle and self.r_s >= min_s_angle:
+                    print("Start position is correct")
+                    self.started = True
+                    return
+
+            # Error if not straight
+            if self.l_e < min_s_angle or self.l_s < min_s_angle or self.r_e < min_s_angle or self.r_s < min_s_angle:
+                    print("Start position is incorrect")
+                    return
+
+        else:
+            if self.l_e <= max_i_angle and self.l_s <= max_i_angle:
+                if self.r_e <= max_i_angle and self.r_s <= max_i_angle:
+                    print("Pullup is correct")
+                    self.started = False
+                    self.counter += 1
+                    return
+            
+            # Not high enough
+            if self.l_e > max_i_angle or self.l_s > max_i_angle or self.r_e > max_i_angle or self.r_s > max_i_angle:
+                print("Pullup is not high enough")
+                return
+    
+
     
 class MicrophoneWidget(QWidget):
     def __init__(self, parent=None):
@@ -358,6 +407,20 @@ class App(QWidget):
         self.thread.change_pixmap_signal.connect(self.update_image)
         # start the thread
         self.thread.start()
+        # self.thread.display_camera()
+        lungeButton.clicked.connect(self.startLunge)
+        squatButton.clicked.connect(self.startSquat)
+        pullupButton.clicked.connect(self.startPullup)
+    
+    def startLunge(self):
+        self.thread.exercise = "lunge"
+    
+    def startSquat(self):
+        self.thread.exercise = "squat"
+    
+    def startPullup(self):
+        self.thread.exercise = "pullup"
+
 
         
     @pyqtSlot(np.ndarray)
