@@ -48,13 +48,23 @@ class VideoThread(QThread):
                                      False, True,
                                      0.7, 0.7)
         self.exercise = None
-        self.exerciseSelected=False
+        self.down = True
+        self.up = False
+        self.knees_over = False
+        self.back_forward = False
+        self.low_knee_threshold = 90
+        self.high_knee_threshold = 120
+    
 
     def run(self): # displays the camera
         while self.cap.isOpened():
             ret, self.img = self.cap.read()
-            
-            if not self.exerciseSelected:
+            pygame.mixer.init()
+            if not ret:
+                print("Failed to grab frame")
+                break
+
+            if self.exercise == None:
                 font = cv2.FONT_HERSHEY_COMPLEX
                 # Position (bottom right corner)
                 widthHeight=self.img.shape
@@ -69,10 +79,6 @@ class VideoThread(QThread):
                             fontScale,
                             fontColor,
                             lineType) 
-                
-                if not ret:
-                    print("Failed to grab frame")
-                    break
             
             self.imgRGB = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
             # self.results = self.detector.process(self.img)
@@ -241,20 +247,24 @@ class VideoThread(QThread):
             return False
     
     def display_count(self, img):
-        # Choose a font
+        if self.exercise == None: return
         font = cv2.FONT_HERSHEY_COMPLEX
         # Position (bottom right corner)
-        bottomRightCornerOfText = (img.shape[1] - 1250, img.shape[0] - 50)
-        fontScale = 2
+        widthHeight=self.img.shape
+        print(widthHeight)
+        print(widthHeight[0])
+        print(widthHeight[1])
+        bottomRightCornerOfText = (int((1/10)*widthHeight[1]), int((9/10)*widthHeight[0]))
+        fontScale = 1
         fontColor = (255, 255, 255)  # White color
         lineType = 4
 
-        cv2.putText(img, f'Count: {self.counter}', 
+        cv2.putText(self.img, 'Count: ' + str(self.counter), 
                     bottomRightCornerOfText, 
                     font, 
                     fontScale,
                     fontColor,
-                    lineType)
+                    lineType) 
 
     def get_landmarks(self): # gets the landmarks from the camera
         self.results = self.pose.process(self.imgRGB)

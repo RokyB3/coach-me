@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 import time
 
-client = OpenAI(api_key="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")
+client = OpenAI(api_key="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")
 
 def whisperTranscript(filename): 
   audio_file= open("audio/input/"+filename, "rb")
@@ -17,7 +17,7 @@ def gptResponse(transcript_text):
     response = client.chat.completions.create(
     model="gpt-4-0125-preview",
     messages=[
-        {"role": "user", "content": "You are a fitness trainer. The exercises are your disposal are the following: lunges, squats, pull-ups. Answer the following question basing yourself off what exercises we have: " + transcript_text},
+        {"role": "user", "content": "Answer the following question very quickly using only the necessary exercises out of lunges, squats, pull-ups, planks: " + transcript_text},
     ]
     )
     response_message=(response.choices[0].message.content)
