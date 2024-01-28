@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import math
+import pygame
 
 class camera: # class for the camera, so that we can use it to display the camera and get all the joints from it
     def __init__(self):
@@ -22,9 +23,13 @@ class camera: # class for the camera, so that we can use it to display the camer
                                      False, True,
                                      0.7, 0.7)
 
+        self.feedback = None
+
     def display_camera(self): # displays the camera
         while self.cap.isOpened():
             ret, self.img = self.cap.read()
+
+            pygame.mixer.init()
             if not ret:
                 print("Failed to grab frame")
                 break
@@ -100,51 +105,65 @@ class camera: # class for the camera, so that we can use it to display the camer
             if self.l_hip >= min_s_angle and self.r_hip >= min_s_angle:
                 print("Start position is correct")
                 self.start = True
+                self.state = "start"
                 return
 
-            # Error if not straight
-            if self.l_hip < min_s_angle or self.r_hip < min_s_angle:
-                print("Stand straight")
+            # # Error if not straight
+            # if self.l_hip < min_s_angle or self.r_hip < min_s_angle:
+            #     print("Stand straight")
+            #     pygame.mixer.music.load('../../../audio/output/lunge_stand_straight.mp3')
+            #     pygame.mixer.music.play()
+            #     self.start = False
+            #     return
+        # Check left lunge
+        if self.l_hip <= max_r_angle and self.l_hip >= min_r_angle and self.l_knee >= min_i_angle and self.l_knee <= max_i_angle:
+            if self.r_hip >= min_s_angle and self.r_knee >= min_r_angle and self.r_knee <= max_r_angle:
+                print("Left lunge is correct")
+                pygame.mixer.music.load('../../../audio/output/lunge_is_good.mp3')
+                pygame.mixer.music.play()
                 self.start = False
+                self.counter += 1
                 return
-        else:
-            # Check left lunge
-            if self.l_hip <= max_r_angle and self.l_hip >= min_r_angle and self.l_knee >= min_i_angle and self.l_knee <= max_i_angle:
-                if self.r_hip >= min_s_angle and self.r_knee >= min_r_angle and self.r_knee <= max_r_angle:
-                    print("Left lunge is correct")
-                    self.start = False
-                    self.counter += 1
-                    return
 
-            # Check right lunge
-            if self.r_hip <= max_r_angle and self.r_hip >= min_r_angle and self.r_knee >= min_i_angle and self.r_knee <= max_i_angle:
-                if self.l_hip >= min_s_angle and self.l_knee >= min_r_angle and self.l_knee <= max_r_angle:
-                    print("Right lunge is correct")
-                    self.start = False
-                    self.counter += 1
-                    return
-                
-            # Error if left foot too front
-            if self.l_hip > min_r_angle and self.l_hip < max_r_angle and self.l_knee > max_i_angle:
-                if self.r_hip > min_s_angle and self.r_knee > min_r_angle and self.r_knee < max_r_angle:
-                    print("Left foot is too front")
-                    return
+        # Check right lunge
+        if self.r_hip <= max_r_angle and self.r_hip >= min_r_angle and self.r_knee >= min_i_angle and self.r_knee <= max_i_angle:
+            if self.l_hip >= min_s_angle and self.l_knee >= min_r_angle and self.l_knee <= max_r_angle:
+                print("Right lunge is correct")
+                pygame.mixer.music.load('../../../audio/output/lunge_is_good.mp3')
+                pygame.mixer.music.play()
+                self.start = False
+                self.counter += 1
+                return
             
-            # Error if right foot too front
-            if self.r_hip > min_r_angle and self.r_hip < max_r_angle and self.r_knee > max_i_angle:
-                if self.l_hip > min_s_angle and self.l_knee > min_r_angle and self.l_knee < max_r_angle:
-                    print("Right foot is too front")
-                    return
-
-            # Check too high (Right Foot Front)
-            if self.l_knee > max_r_angle and self.r_hip > max_r_angle:
-                print("Too high")
+        # Error if left foot too front
+        if self.l_hip > min_r_angle and self.l_hip < max_r_angle and self.l_knee > max_i_angle:
+            if self.r_hip > min_s_angle and self.r_knee > min_r_angle and self.r_knee < max_r_angle:
+                print("Left foot is too front")
+                pygame.mixer.music.load('../../../audio/output/lunge_too_forward.mp3')
+                pygame.mixer.music.play()
+                return
+        
+        # Error if right foot too front
+        if self.r_hip > min_r_angle and self.r_hip < max_r_angle and self.r_knee > max_i_angle:
+            if self.l_hip > min_s_angle and self.l_knee > min_r_angle and self.l_knee < max_r_angle:
+                print("Right foot is too front")
+                pygame.mixer.music.load('../../../audio/output/lunge_too_forward.mp3')
+                pygame.mixer.music.play()
                 return
 
-            # Check too high (Left Foot Front)
-            if self.r_knee > max_r_angle and self.l_hip > max_r_angle:
-                print("Too high")
-                return
+        # Check too high (Right Foot Front)
+        if self.l_knee > max_r_angle and self.r_hip > max_r_angle:
+            print("Too high")
+            pygame.mixer.music.load('../../../audio/output/lunge_too_high.mp3')
+            pygame.mixer.music.play()
+            return
+
+        # Check too high (Left Foot Front)
+        if self.r_knee > max_r_angle and self.l_hip > max_r_angle:
+            print("Too high")
+            pygame.mixer.music.load('../../../audio/output/lunge_too_high.mp3')
+            pygame.mixer.music.play()
+            return
 
 if __name__ == "__main__":
     cam = camera()
