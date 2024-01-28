@@ -1,7 +1,7 @@
 import sys
 
 from PyQt5 import QtGui
-from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout, QPushButton, QHBoxLayout
+from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QPixmap, QFont, QPainter, QColor
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread, pyqtSignal
 import sys
@@ -13,6 +13,7 @@ import mediapipe as mp
 import tkinter as tk
 import sounddevice as sd
 import soundfile as sf
+import pygame
 
 BACKGROUND_COLOR = "#71B48D"
 PRIMARY_COLOR = "#86CB92"
@@ -99,14 +100,16 @@ class MicrophoneWidget(QWidget):
         self.image=QPixmap("assets/microphone.png")
         self.recordingThread=None
         self.recording=False
+
+        self.screen = QDesktopWidget().screenGeometry()
         
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)  # Enable antialiasing
 
         # Get the dimensions of the widget
-        widget_width = self.width()
-        widget_height = self.height()
+        widget_width = float(self.screen.width()/10)
+        widget_height = float(self.screen.height()/10)
 
         # Set the circle's properties
         circle_diameter = min(widget_width, widget_height) - 20  # Adjust for padding
@@ -121,14 +124,16 @@ class MicrophoneWidget(QWidget):
         
         color = QColor(0, 255, 0) if self.recording else QColor(255, 0, 0)
         painter.setBrush(color)  # Green if recording, red otherwise
-        painter.drawEllipse(int(circle_x), int(circle_y), circle_diameter, circle_diameter)
+        painter.drawEllipse(int(circle_x), int(circle_y), int(circle_diameter), int(circle_diameter))
 
+        self.setCursor(Qt.PointingHandCursor)
+        
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.recording = not self.recording  # Toggle recording status
             if self.recording:
                 self.recordingThread = RecordingThread(self)
-                self.recordingThread.finished.connect(self.onThreadEnded())
+                self.recordingThread.finished.connect(self.onThreadEnded)
                 self.recordingThread.start()
             else:
                 if self.recordingThread:
@@ -140,33 +145,70 @@ class MicrophoneWidget(QWidget):
         print("test")
         
 class RecordingThread(QThread):
+    
     finished=pyqtSignal()
+    
     def __init__(self, parent=None):
         super().__init__(parent)
         self.recording=True
         
     def run(self):
-        filename = 'audio/input/input.wav'
+        input_audio = 'audio/input/input.wav'
 
-        duration = 5 
+        duration = 6 
 
         audio_data = sd.rec(int(duration * 44100), samplerate=44100, channels=2, dtype='int16')
         sd.wait() 
 
-        sf.write(filename, audio_data, samplerate=44100)
+        sf.write(input_audio, audio_data, samplerate=44100)
 
         getResponseFromInput("input.wav")
         
+        output_audio = 'audio/output/prompt-output.mp3'
+        
+        self.play_audio(output_audio)
         self.finished.emit()
     
     def stop(self):
         print("recording stopped")
         self.recording=False 
 
+    def play_audio(self,filename):
+        pygame.init()
+
+        pygame.mixer.init()
+
+        pygame.mixer.music.load(filename)
+
+        pygame.mixer.music.play()
+
+        while pygame.mixer.music.get_busy():
+            pygame.time.Clock().tick(10)  
+
+        pygame.mixer.quit()
+        pygame.quit()
+        
+class ExerciseButton(QPushButton):
+    def __init__(self, text):
+        super().__init__(text)
+        self.setStyleSheet("""
+            QPushButton {
+                border-radius: 5px; 
+                border: 6px solid #FEFEFE;
+                background: #86CB92;
+                min-height:100px;
+            }
+        """)
+        self.setCursor(Qt.PointingHandCursor)
+        self.exerciseName=text
+    def mousePressEvent(self, event):
+        if event.button() == 1:  # Left mouse button
+            print(self.exerciseName)
+            
 class App(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Coach-me")
+        self.setWindowTitle("Coach.me")
         self.disply_width = screen_width
         self.display_height = screen_height
         self.showMaximized()
@@ -198,7 +240,24 @@ class App(QWidget):
 
         hbox = QHBoxLayout()
         hbox.addWidget(self.image_label)
-        hbox.addWidget(self.microphoneWidget)
+        buttonvbox= QVBoxLayout()
+        hbox.addLayout(buttonvbox)
+        
+        lungeButton=ExerciseButton("Lunges")
+        buttonvbox.addWidget(lungeButton)
+        squatButton=ExerciseButton("Squats")
+        buttonvbox.addWidget(squatButton)
+        pullupButton=ExerciseButton("Pull-Ups")
+        buttonvbox.addWidget(pullupButton)
+        pushupButton=ExerciseButton("Push-Ups")
+        buttonvbox.addWidget(pushupButton)
+        situpButton=ExerciseButton("Sit-Ups")
+        buttonvbox.addWidget(situpButton)
+        
+        microphonewidgethbox=QHBoxLayout()
+        buttonvbox.addLayout(microphonewidgethbox)
+        microphonewidgethbox.addWidget(self.microphoneWidget, alignment=Qt.AlignCenter)
+            
         vbox.addLayout(hbox)
         # set the vbox layout as the widgets layout
         self.setLayout(vbox)
@@ -210,8 +269,7 @@ class App(QWidget):
         # start the thread
         self.thread.start()
 
-
-
+        
     @pyqtSlot(np.ndarray)
     def update_image(self, cv_img):
         """Updates the image_label with a new opencv image"""
@@ -226,7 +284,7 @@ class App(QWidget):
         convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
         p = convert_to_Qt_format.scaled(self.disply_width, self.display_height, Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
-    
+
 if __name__=="__main__":
     app = QApplication(sys.argv)
     a = App()
