@@ -2,10 +2,13 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import math
+import pygame
 
 class camera: # class for the camera, so that we can use it to display the camera and get all the joints from it
     def __init__(self):
         self.start = True
+        self.done = False
+        self.feedback = None
         self.counter = 0
         self.cap = cv2.VideoCapture(0)
         #self.detector = mp.pose.Pose()
@@ -25,6 +28,8 @@ class camera: # class for the camera, so that we can use it to display the camer
     def display_camera(self): # displays the camera
         while self.cap.isOpened():
             ret, self.img = self.cap.read()
+
+            pygame.mixer.init()
             if not ret:
                 print("Failed to grab frame")
                 break
@@ -95,29 +100,33 @@ class camera: # class for the camera, so that we can use it to display the camer
             return
 
         # Check start position
-        if self.start == False:
+        if self.start == False or self.done == True:
             if self.l_e >= min_s_angle and self.l_s >= min_s_angle:
                 if self.r_e >= min_s_angle and self.r_s >= min_s_angle:
                     print("Start position is correct")
                     self.start = True
-                    return
+                    self.done = False
+                    if self.feedback != None:
+                        pygame.mixer.music.load(self.feedback)
+                        pygame.mixer.music.play()
+                        self.feedback = None
+                        return
 
-            # Error if not straight
-            if self.l_e < min_s_angle or self.l_s < min_s_angle or self.r_e < min_s_angle or self.r_s < min_s_angle:
-                    print("Start position is incorrect")
-                    return
-
-        else:
+        if self.done == False:
             if self.l_e <= max_i_angle and self.l_s <= max_i_angle:
                 if self.r_e <= max_i_angle and self.r_s <= max_i_angle:
                     print("Pullup is correct")
-                    self.start = False
+                    self.feedback = '../../../audio/output/pullup_is_good.mp3'
+                    self.done = True
                     self.counter += 1
                     return
             
             # Not high enough
-            if self.l_e > max_i_angle or self.l_s > max_i_angle or self.r_e > max_i_angle or self.r_s > max_i_angle:
+            if self.l_e <= max_i_angle+40 or self.l_s <= max_i_angle+40 or self.r_e <= max_i_angle+40 or self.r_s <= max_i_angle+40:
+                self.start = False
                 print("Pullup is not high enough")
+                if self.feedback != '../../../audio/output/pullup_is_good.mp3': # Don't overwrite good feedback
+                    self.feedback = '../../../audio/output/pullup_not_high_enough.mp3'
                 return
 
 if __name__ == "__main__":
