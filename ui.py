@@ -120,15 +120,15 @@ class MicrophoneWidget(QWidget):
         circle_x = (widget_width - circle_diameter) / 2
         circle_y = (widget_height - circle_diameter) / 2
 
+        color = QColor(0, 255, 0) if self.recording else QColor(255, 0, 0)
+        painter.setBrush(color)  # Green if recording, red otherwise
+        painter.drawEllipse(int(circle_x), int(circle_y), int(circle_diameter), int(circle_diameter)) 
+        
         image_width = int(min(widget_width, widget_height) / 2)
         image_height = int(min(widget_width, widget_height) / 2)
         image_x = int((widget_width - image_width) / 2)
         image_y = int((widget_height - image_height) / 2)
         painter.drawPixmap(image_x, image_y, image_width, image_height, self.image)
-        
-        color = QColor(0, 255, 0) if self.recording else QColor(255, 0, 0)
-        painter.setBrush(color)  # Green if recording, red otherwise
-        painter.drawEllipse(int(circle_x), int(circle_y), int(circle_diameter), int(circle_diameter))
 
         self.setCursor(Qt.PointingHandCursor)
         
@@ -157,9 +157,6 @@ class RecordingThread(QThread):
         super().__init__(parent)
         self.recording=True
         self.microphoneWidget=parent
-        self.microphonewidgethbox=microphonewidgethbox
-        print(microphonewidgethbox)
-        
     def run(self):
         input_audio = 'audio/input/input.wav'
 
