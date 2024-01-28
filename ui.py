@@ -169,13 +169,15 @@ class camera: # class for the camera, so that we can use it to display the camer
     
     
 class MicrophoneWidget(QWidget):
-    def __init__(self, container, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.setMinimumSize(200, 200)  # Set minimum size for the widget
+        self.screen = QDesktopWidget().screenGeometry()
+        self.setMinimumSize(int(0.7*self.screen.width()/10), int(0.7*self.screen.width()/10))
+        self.setMaximumSize(int(0.7*self.screen.width()/10), int(0.7*self.screen.width()/10))
         self.image=QPixmap("assets/microphone.png")
         self.recordingThread=None
         self.recording=False
-        self.container=container
+        self.setCursor(Qt.PointingHandCursor)
         self.setStyleSheet=("""
                 MicrophoneWidget {
                 border-radius: 5px; 
@@ -183,15 +185,15 @@ class MicrophoneWidget(QWidget):
                 background: #86CB92;
             }
         """)
-        self.screen = QDesktopWidget().screenGeometry()
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)  # Enable antialiasing
 
         # Get the dimensions of the widget
-        widget_width = float(self.screen.width()/10)
-        widget_height = float(self.screen.height()/10)
+        widget_width = float(0.7*self.screen.width()/10)
+        widget_height = float(0.7*self.screen.width()/10)
 
         # Set the circle's properties
         circle_diameter = min(widget_width, widget_height) - 20  # Adjust for padding
@@ -206,15 +208,13 @@ class MicrophoneWidget(QWidget):
         image_height = int(min(widget_width, widget_height) / 2)
         image_x = int((widget_width - image_width) / 2)
         image_y = int((widget_height - image_height) / 2)
-        painter.drawPixmap(image_x, image_y, image_width, image_height, self.image)
-
-        self.setCursor(Qt.PointingHandCursor)
+        painter.drawPixmap(image_x, image_y, int(image_width), int(image_width), self.image)
         
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.recording = not self.recording  # Toggle recording status
             if self.recording:
-                self.recordingThread = RecordingThread(self.container, parent=self)
+                self.recordingThread = RecordingThread(parent=self)
                 self.recordingThread.finished.connect(self.onThreadEnded)
                 self.recordingThread.start()
             else:
@@ -231,7 +231,7 @@ class RecordingThread(QThread):
     
     finished=pyqtSignal()
     
-    def __init__(self, microphonewidgethbox, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.recording=True
         self.microphoneWidget=parent
@@ -279,9 +279,14 @@ class ExerciseButton(QPushButton):
                 border-radius: 5px; 
                 border: 6px solid #FEFEFE;
                 background: #86CB92;
-                min-height:100px;
+                min-height:120%;
             }
         """)
+        font=QFont()
+        font.setFamily("Helvetica")
+        font.setPointSize(12)
+        font.setBold(True) 
+        self.setFont(font)
         self.setCursor(Qt.PointingHandCursor)
         self.exerciseName=text
     def mousePressEvent(self, event):
@@ -306,11 +311,12 @@ class App(QWidget):
         self.textLabel.setStyleSheet("""
             color: white;
             font-weight: bold;
+            font-family: Helvetica;
         """)
 
         self.button = QPushButton('Start', self)
         microphonewidgethbox=QHBoxLayout()
-        self.microphoneWidget=MicrophoneWidget(microphonewidgethbox)
+        self.microphoneWidget=MicrophoneWidget()
 
         # create a vertical box layout and add the two labels
         vbox = QVBoxLayout()
@@ -333,14 +339,15 @@ class App(QWidget):
         buttonvbox.addWidget(squatButton)
         pullupButton=ExerciseButton("Pull-Ups")
         buttonvbox.addWidget(pullupButton)
-        pushupButton=ExerciseButton("Push-Ups")
-        buttonvbox.addWidget(pushupButton)
         situpButton=ExerciseButton("Sit-Ups")
         buttonvbox.addWidget(situpButton)
         
         buttonvbox.addLayout(microphonewidgethbox)
         microphonewidgethbox.addWidget(self.microphoneWidget, alignment=Qt.AlignCenter)
-            
+        instructionLabel=QLabel("Press to record, speak while button is green.")
+        instructionLabel.setWordWrap(True)
+        instructionLabel.setStyleSheet("font-weight:bold;color:red; font-size:64px")
+        buttonvbox.addWidget(instructionLabel, alignment=Qt.AlignCenter)
         vbox.addLayout(hbox)
         # set the vbox layout as the widgets layout
         self.setLayout(vbox)
