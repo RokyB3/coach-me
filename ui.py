@@ -7,8 +7,9 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread, pyqtSignal
 import sys
 sys.path.append('src/py/pipeline')
 sys.path.append('src/py/exercises')
+sys.path.append('src/py/opencv')
 from pipeline import getResponseFromInput
-import lunges 
+from openai import OpenAI
 import numpy as np
 import cv2
 import mediapipe as mp
@@ -16,6 +17,8 @@ import sounddevice as sd
 import soundfile as sf
 import pygame
 import math
+
+gpt_exercises = []
 
 BACKGROUND_COLOR = "#71B48D"
 PRIMARY_COLOR = "#86CB92"
@@ -76,11 +79,12 @@ class VideoThread(QThread):
             
             self.imgRGB = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
             # self.results = self.detector.process(self.img)
-            self.results = self.pose.process(self.img)
+            self.results = self.pose.process(self.imgRGB)
             self.lms = self.get_LM_positions(self.img)
+            self.img = self.draw_Pose(self.img)
+            self.display_count(self.img) 
             if ret:
                 self.change_pixmap_signal.emit(self.img)
-
             if self.results.pose_landmarks:
                 if self.exercise == "lunge": self.handle_lunge()
                 elif self.exercise == "squat": self.handle_squat()
@@ -104,10 +108,32 @@ class VideoThread(QThread):
                 cx, cy = int(lm.x * w), int(lm.y * h)
                 lmList.append([id, cx, cy])
         
-        self.mpDraw.draw_landmarks(img,self.results.pose_landmarks,
-                                           self.mpPose.POSE_CONNECTIONS)
+        # self.mpDraw.draw_landmarks(img,self.results.pose_landmarks,
+        #                                    self.mpPose.POSE_CONNECTIONS)
         return lmList
 
+    def draw_Pose(self, img, draw=True):
+        if self.results.pose_landmarks:
+            if draw:
+                # Landmarks excluding the face
+                selected_landmarks = set(range(11, 33))  # This includes shoulders to feet
+
+                # Draw the landmarks
+                for id, lm in enumerate(self.results.pose_landmarks.landmark):
+                    if id in selected_landmarks:
+                        h, w, c = img.shape
+                        cx, cy = int(lm.x * w), int(lm.y * h)
+                        cv2.circle(img, (cx, cy), 5, (0, 0, 0), cv2.FILLED)
+
+                # Draw the connections
+                for connection in self.mpPose.POSE_CONNECTIONS:
+                    if connection[0] in selected_landmarks and connection[1] in selected_landmarks:
+                        start_landmark = self.results.pose_landmarks.landmark[connection[0]]
+                        end_landmark = self.results.pose_landmarks.landmark[connection[1]]
+                        start_point = (int(start_landmark.x * w), int(start_landmark.y * h))
+                        end_point = (int(end_landmark.x * w), int(end_landmark.y * h))
+                        cv2.line(img, start_point, end_point, (255, 0, 0), 2)
+        return img
 
     def calculate_2d_angle(self, p1, p2, p3):
 
@@ -129,6 +155,147 @@ class VideoThread(QThread):
             angle = 360 - angle
         
         return angle
+
+    def calculate_3d_angle(self, a, b, c):
+        a = np.array(a)
+        b = np.array(b)
+        c = np.array(c)
+        # Create vectors
+        vector_ab = b - a
+        vector_cb = b - c
+        # Dot product
+        dot_product = np.dot(vector_ab, vector_cb)
+        # Magnitude
+        magnitude_ab = np.linalg.norm(vector_ab)
+        magnitude_cb = np.linalg.norm(vector_cb)
+        # Cos angle
+        cos_angle = dot_product / (magnitude_ab * magnitude_cb)
+
+        # Avoiding possible numerical issues with arccos
+        cos_angle = np.clip(cos_angle, -1, 1)
+
+        # Angle in radians
+        angle_radians = np.arccos(cos_angle)
+
+        # Convert to degrees
+        angle_degrees = np.degrees(angle_radians)
+
+        return angle_degrees
+
+    def get_angles(self): # get the angles of the joints (knees, hips, shoulders)
+        # get the angles of the knees
+        self.l_knee_angle = self.calculate_3d_angle(self.l_hi, self.l_k, self.l_a)
+        self.r_knee_angle = self.calculate_3d_angle(self.r_hi, self.r_k, self.r_a) 
+        self.l_hip_angle = self.calculate_3d_angle(self.l_s, self.l_hi, self.l_k)
+        self.r_hip_angle = self.calculate_3d_angle(self.r_s, self.r_hi, self.r_k)
+        return
+    
+    def check_knees(self): # check if the knees are bent
+        if self.down and self.l_knee_angle < self.low_knee_threshold and self.r_knee_angle < self.low_knee_threshold:
+            if 85 <= self.l_hip_angle <= 100 and 85 <= self.r_hip_angle <= 100:
+                print("Correct form")
+                self.knees_over = False
+                self.back_forward = False
+
+                self.up = True
+                self.down = False
+            elif self.l_hip_angle < 85 or self.r_hip_angle < 85:
+                self.back_forward = True
+            elif self.check_toes():
+                self.knees_over = True
+
+            self.up = True
+            self.down = False
+
+        elif self.up and self.l_knee_angle > 130 and self.r_knee_angle > 130:
+            if self.l_hip_angle > 135 and self.r_hip_angle > 135:
+                print("Suffienctly straight hips and knees, go down")
+                self.up = False
+                self.down = True
+                if not self.knees_over and not self.back_forward:
+                    self.counter += 1
+                    print("Squat counter: ", self.counter)
+
+                    # play feedback
+                    pygame.mixer.music.load('audio/output/squat_is_good.mp3')
+                    pygame.mixer.music.play()
+                if self.knees_over:
+                    print("Your knees are over your toes")
+                    
+                    # play feedback
+                    pygame.mixer.music.load('audio/output/squat_toes_over.mp3')
+                    pygame.mixer.music.play()
+                if self.back_forward:
+                    print("Back is too forward enough") 
+
+                    # play feedback
+                    pygame.mixer.music.load('audio/output/squat_back_forward.mp3')
+                    pygame.mixer.music.play()
+            
+                self.knees_over = False
+                self.back_forward = False
+        return
+
+    def check_toes(self): # check if the toes are over the knees
+        # check if z coordinate of the knees are greater than the z coordinate of the toes plus some threshold
+        if  self.l_toe[2] - self.l_k[2] > 0 or self.r_toe[2] - self.r_k[2] > 0:
+            return True
+        else:
+            return False
+    
+    def display_count(self, img):
+        # Choose a font
+        font = cv2.FONT_HERSHEY_COMPLEX
+        # Position (bottom right corner)
+        bottomRightCornerOfText = (img.shape[1] - 1250, img.shape[0] - 50)
+        fontScale = 2
+        fontColor = (255, 255, 255)  # White color
+        lineType = 4
+
+        cv2.putText(img, f'Count: {self.counter}', 
+                    bottomRightCornerOfText, 
+                    font, 
+                    fontScale,
+                    fontColor,
+                    lineType)
+
+    def get_landmarks(self): # gets the landmarks from the camera
+        self.results = self.pose.process(self.imgRGB)
+
+        # get the landmarks of the person in the camera
+        if self.results.pose_landmarks:
+            self.l_s = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_SHOULDER])
+            self.l_hi = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_HIP])
+            self.l_k = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_KNEE])
+            self.l_a = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_ANKLE])
+            self.l_e = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_ELBOW])
+            self.l_w = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_WRIST])
+            self.l_he = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_HEEL])
+            self.l_toe = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_FOOT_INDEX])
+            self.r_s = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_SHOULDER])
+            self.r_hi = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_HIP])
+            self.r_k = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_KNEE])
+            self.r_a = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_ANKLE])
+            self.r_e = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_ELBOW])
+            self.r_w = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_WRIST])
+            self.r_he = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_HEEL])
+            self.r_toe = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.RIGHT_FOOT_INDEX])
+            # create a list of all the landmarks
+            self.landmark_list = [self.l_s, self.l_hi, self.l_k, self.l_a, self.l_e, self.l_w, self.l_he,
+                          self.r_s, self.r_hi, self.r_k, self.r_a, self.r_e, self.r_w, self.r_he]
+            return True
+
+    def get_xyz(self, landmark): # gets the x, y, and z coordinates of a landmark
+        return [landmark.x, landmark.y, landmark.z]
+    
+    def get_xy_distance(self, a, b): # gets the distance between two landmarks in the x and y directions
+        a = np.array(a)
+        b = np.array(b)
+        # Create vectors
+        vector_ab = b - a
+        # Magnitude
+        magnitude_ab = np.linalg.norm(vector_ab[0:3:2])
+        return magnitude_ab
 
     def handle_lunge(self):
         # Constants
@@ -158,13 +325,6 @@ class VideoThread(QThread):
                     self.feedback = None
                 return
 
-            # # Error if not straight
-            # if self.l_hip < min_s_angle or self.r_hip < min_s_angle:
-            #     print("Stand straight")
-            #     pygame.mixer.music.load('../../../audio/output/lunge_stand_straight.mp3')
-            #     pygame.mixer.music.play()
-            #     self.start = False
-            #     return
         if self.done == False:
             # Check left lunge
             if self.l_hip <= max_r_angle and self.l_hip >= min_r_angle and self.l_knee >= min_i_angle and self.l_knee <= max_i_angle:
@@ -246,7 +406,11 @@ class VideoThread(QThread):
                     self.feedback = 'audio/output/pullup_not_high_enough.mp3'
                 return
     
-
+    def handle_squat(self): # displays the camera
+        self.get_landmarks()
+        self.get_angles() # get the angles of the joints (knees, hips, shoulders)
+        self.check_knees() # check if the knees are bent
+        return
     
 class MicrophoneWidget(QWidget):
     def __init__(self, parent=None):
@@ -344,13 +508,17 @@ class RecordingThread(QThread):
         self.microphoneWidget.recording=False
         self.microphoneWidget.generating=True
         self.microphoneWidget.update()
-        getResponseFromInput("input.wav")
+        text = getResponseFromInput("input.wav")
         
         output_audio = 'audio/output/prompt-output.mp3'
 
         self.play_audio(output_audio)
         self.microphoneWidget.generating=False
         self.microphoneWidget.update()
+
+        for ex in ['lunge', 'squat', 'pullup']:
+            if ex in text.lower():
+                gpt_exercises.append(ex)
         self.finished.emit()
 
     def stop(self):
@@ -461,18 +629,31 @@ class App(QWidget):
         lungeButton.clicked.connect(self.startLunge)
         squatButton.clicked.connect(self.startSquat)
         pullupButton.clicked.connect(self.startPullup)
+        self.buttons = [lungeButton, squatButton, pullupButton]
     
     def startLunge(self, thread):
         self.thread.exerciseSelected=True
         self.thread.exercise = "lunge"
+        self.thread.counter = 0
+        for button in self.buttons:
+            self.resetExerciseButtonColors(button)
+        self.setExerciseButtonColor(self.buttons[0])
     
     def startSquat(self, thread):
         self.thread.exerciseSelected=True
         self.thread.exercise = "squat"
+        self.thread.counter = 0
+        for button in self.buttons:
+            self.resetExerciseButtonColors(button)
+        self.setExerciseButtonColor(self.buttons[1])
     
     def startPullup(self, thread):
         self.thread.exerciseSelected=True
         self.thread.exercise = "pullup"
+        self.thread.counter = 0
+        for button in self.buttons:
+            self.resetExerciseButtonColors(button)
+        self.setExerciseButtonColor(self.buttons[2])
 
     @pyqtSlot(np.ndarray)
     def update_image(self, cv_img):
@@ -488,6 +669,30 @@ class App(QWidget):
         convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
         p = convert_to_Qt_format.scaled(self.display_width, self.display_height, Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
+    
+    def resetExerciseButtonColors(self, button):
+        button.setStyleSheet("""
+            QPushButton {
+                border-radius: 5px; 
+                border: 6px solid #FEFEFE;
+                background: #86CB92;
+                min-height:120%;
+            }
+            QPushButton:hover { background-color: #2980b9; }
+            QPushButton:pressed { background-color: #1f618d; }
+        """)
+    
+    def setExerciseButtonColor(self, button):
+        button.setStyleSheet("""
+            QPushButton {
+                border-radius: 5px; 
+                border: 6px solid #FEFEFE;
+                background: #2980b9;
+                min-height:120%;
+            }
+            QPushButton:hover { background-color: #2980b9; }
+            QPushButton:pressed { background-color: #1f618d; }
+        """)
 
 if __name__=="__main__":
     app = QApplication(sys.argv)
