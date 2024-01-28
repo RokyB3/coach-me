@@ -43,13 +43,31 @@ class VideoThread(QThread):
                                      False, True,
                                      0.7, 0.7)
         self.exercise = None
+        self.exerciseSelected=False
 
     def run(self): # displays the camera
         while self.cap.isOpened():
             ret, self.img = self.cap.read()
-            if not ret:
-                print("Failed to grab frame")
-                break
+            
+            if not self.exerciseSelected:
+                font = cv2.FONT_HERSHEY_COMPLEX
+                # Position (bottom right corner)
+                bottomRightCornerOfText = (self.img.shape[1] - 500, self.img.shape[0] - 50)
+                fontScale = 1
+                fontColor = (255, 255, 255)  # White color
+                lineType = 4
+
+                cv2.putText(self.img, 'Pick an exercise', 
+                            bottomRightCornerOfText, 
+                            font, 
+                            fontScale,
+                            fontColor,
+                            lineType) 
+                
+                if not ret:
+                    print("Failed to grab frame")
+                    break
+            
             self.imgRGB = cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB)
             # self.results = self.detector.process(self.img)
             self.results = self.pose.process(self.img)
@@ -371,7 +389,7 @@ class App(QWidget):
         self.setStyleSheet("background-color: {};".format(BACKGROUND_COLOR))
 
         # create a text label
-        self.textLabel = QLabel('Coach.me')
+        self.textLabel = QLabel('C o a c h.m e')
         self.textLabel.setAlignment(Qt.AlignCenter)
         font = QFont('Yu Gothic', 48)
         self.textLabel.setFont(font)
@@ -431,13 +449,16 @@ class App(QWidget):
         squatButton.clicked.connect(self.startSquat)
         pullupButton.clicked.connect(self.startPullup)
     
-    def startLunge(self):
+    def startLunge(self, thread):
+        self.thread.exerciseSelected=True
         self.thread.exercise = "lunge"
     
-    def startSquat(self):
+    def startSquat(self, thread):
+        self.thread.exerciseSelected=True
         self.thread.exercise = "squat"
     
-    def startPullup(self):
+    def startPullup(self, thread):
+        self.thread.exerciseSelected=True
         self.thread.exercise = "pullup"
 
     @pyqtSlot(np.ndarray)
