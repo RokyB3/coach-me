@@ -12,7 +12,6 @@ import lunges
 import numpy as np
 import cv2
 import mediapipe as mp
-import tkinter as tk
 import sounddevice as sd
 import soundfile as sf
 import pygame
@@ -20,10 +19,6 @@ import pygame
 BACKGROUND_COLOR = "#71B48D"
 PRIMARY_COLOR = "#86CB92"
 SECONDARY_COLOR = "#F2F2F2"
-
-root = tk.Tk()
-screen_width = root.winfo_screenwidth()
-screen_height = root.winfo_screenheight()
 
 class VideoThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
