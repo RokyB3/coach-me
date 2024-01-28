@@ -2,7 +2,7 @@ import sys
 
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import *
-from PyQt5.QtGui import QPixmap, QFont, QPainter, QColor
+from PyQt5.QtGui import QPixmap, QFont, QPainter, QColor, QFontDatabase
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread, pyqtSignal
 import sys
 sys.path.append('src/py/pipeline')
@@ -226,6 +226,7 @@ class MicrophoneWidget(QWidget):
         self.image=QPixmap("assets/microphone.png")
         self.recordingThread=None
         self.recording=False
+        self.generating=False
         self.setCursor(Qt.PointingHandCursor)
         self.hovering=False
         self.setStyleSheet("""
@@ -249,14 +250,14 @@ class MicrophoneWidget(QWidget):
         circle_y = (widget_height - circle_diameter) / 2
 
         color = None
-        if not self.recording and not self.hovering:
+        if self.generating:
+            color=QColor(255,255, 0)
+        elif (not self.recording) and not self.hovering:
             color=QColor(255,0,0)
-        elif self.recording and not self.hovering:
-            color=QColor(0,255,0)
-        elif not self.recording and self.hovering:
-            color=QColor(230, 0, 0)
-        elif self.recording and self.hovering:
-            color=QColor(0,230,0)
+        elif (not self.recording) and self.hovering:
+            color=QColor(230,0,0)
+        else:
+            color=QColor(0, 255, 0)
         painter.setBrush(color)  # Green if recording, red otherwise
         painter.drawEllipse(int(circle_x), int(circle_y), int(circle_diameter), int(circle_diameter)) 
         
@@ -268,27 +269,27 @@ class MicrophoneWidget(QWidget):
         
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self.recording = not self.recording  # Toggle recording status
-            if self.recording:
-                self.recordingThread = RecordingThread(parent=self)
-                self.recordingThread.finished.connect(self.onThreadEnded)
-                self.recordingThread.start()
-            else:
-                if self.recordingThread:
-                    self.recordingThread.stop()
+            if not(self.generating or self.recording):
+                self.recording = not self.recording  # Toggle recording status
+                if self.recording:
+                    self.recordingThread = RecordingThread(parent=self)
+                    self.recordingThread.finished.connect(self.onThreadEnded)
+                    self.recordingThread.start()
+                else:
+                    if self.recordingThread:
+                        self.recordingThread.stop()
 
-        self.update()
+            self.update()
 
     def enterEvent(self,event):
         self.hovering=True
         self.update()
         
-    def exitEvent(self,event):
+    def leaveEvent(self,event):
         self.hovering=False
         self.update()
         
     def onThreadEnded(self):
-        self.recording=False
         self.update()
         
 class RecordingThread(QThread):
@@ -309,11 +310,16 @@ class RecordingThread(QThread):
 
         sf.write(input_audio, audio_data, samplerate=44100)
 
+        self.microphoneWidget.recording=False
+        self.microphoneWidget.generating=True
+        self.microphoneWidget.update()
         getResponseFromInput("input.wav")
         
         output_audio = 'audio/output/prompt-output.mp3'
 
         self.play_audio(output_audio)
+        self.microphoneWidget.generating=False
+        self.microphoneWidget.update()
         self.finished.emit()
 
     def stop(self):
@@ -350,7 +356,7 @@ class ExerciseButton(QPushButton):
         """)
         font=QFont()
         font.setFamily("Helvetica")
-        font.setPointSize(12)
+        font.setPointSize(32)
         font.setBold(True) 
         self.setFont(font)
         self.setCursor(Qt.PointingHandCursor)
@@ -367,12 +373,11 @@ class App(QWidget):
         # create a text label
         self.textLabel = QLabel('Coach.me')
         self.textLabel.setAlignment(Qt.AlignCenter)
-        font = QFont('Inter', 48)
+        font = QFont('Yu Gothic', 48)
         self.textLabel.setFont(font)
         self.textLabel.setStyleSheet("""
             color: black;
             font-weight: bold; 
-            font-family: Helvetica;
             text-transform:uppercase;
         """)
 
@@ -408,7 +413,8 @@ class App(QWidget):
         microphonewidgethbox.addWidget(self.microphoneWidget, alignment=Qt.AlignCenter)
         instructionLabel=QLabel("Press to record, speak while button is green.")
         instructionLabel.setWordWrap(True)
-        instructionLabel.setStyleSheet("font-weight:bold;color:red; font-size:64px")
+        instructionLabel.setStyleSheet("font-weight:bold; color:red; font-size:48px; text-align:center;")
+        instructionLabel.setAlignment(Qt.AlignCenter)
         buttonvbox.addWidget(instructionLabel, alignment=Qt.AlignCenter)
         vbox.addLayout(hbox)
         # set the vbox layout as the widgets layout
@@ -434,8 +440,6 @@ class App(QWidget):
     def startPullup(self):
         self.thread.exercise = "pullup"
 
-
-        
     @pyqtSlot(np.ndarray)
     def update_image(self, cv_img):
         """Updates the image_label with a new opencv image"""
