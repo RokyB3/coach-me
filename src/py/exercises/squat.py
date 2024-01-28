@@ -20,6 +20,13 @@ class squat: # class for the camera, so that we can use it to display the camera
         self.knees_over = False
         self.back_forward = False
 
+    def handle_squat_for_export(self): # displays the camera
+        self.cam.get_landmarks()
+        self.get_angles() # get the angles of the joints (knees, hips, shoulders)
+        self.check_knees() # check if the knees are bent 
+        self.display_squat_count(self.cam.img) # display the squat count
+        return 
+
     def handle_squat(self): # displays the camera
         while self.cam.cap.isOpened():
             ret, self.cam.img = self.cam.cap.read()
@@ -34,8 +41,7 @@ class squat: # class for the camera, so that we can use it to display the camera
             self.cam.imgRGB = cv2.cvtColor(self.cam.img, cv2.COLOR_BGR2RGB) # convert the image to RGB
             self.cam.get_landmarks()
             self.get_angles() # get the angles of the joints (knees, hips, shoulders)
-            if self.check_knees(): # check if the knees are bent
-                    print("Squat")
+            self.check_knees() # check if the knees are bent
 
             self.cam.img = self.cam.draw_Pose(self.cam.img) # draw the landmarks that we got from get_landmarks
             self.display_squat_count(self.cam.img) # display the squat count
