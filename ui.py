@@ -210,7 +210,7 @@ class VideoThread(QThread):
             self.up = True
             self.down = False
 
-        elif self.up and self.l_knee_angle > 130 and self.r_knee_angle > 130:
+        elif self.up and self.l_knee_angle > 120 and self.r_knee_angle > 120:
             if self.l_hip_angle > 135 and self.r_hip_angle > 135:
                 print("Suffienctly straight hips and knees, go down")
                 self.up = False
@@ -241,7 +241,7 @@ class VideoThread(QThread):
 
     def check_toes(self): # check if the toes are over the knees
         # check if z coordinate of the knees are greater than the z coordinate of the toes plus some threshold
-        if  self.l_toe[2] - self.l_k[2] > 0 or self.r_toe[2] - self.r_k[2] > 0:
+        if  self.l_toe[2] - self.l_k[2] > -1 or self.r_toe[2] - self.r_k[2] > -1:
             return True
         else:
             return False
@@ -251,9 +251,6 @@ class VideoThread(QThread):
         font = cv2.FONT_HERSHEY_COMPLEX
         # Position (bottom right corner)
         widthHeight=self.img.shape
-        print(widthHeight)
-        print(widthHeight[0])
-        print(widthHeight[1])
         bottomRightCornerOfText = (int((1/10)*widthHeight[1]), int((9/10)*widthHeight[0]))
         fontScale = 1
         fontColor = (255, 255, 255)  # White color
@@ -612,7 +609,7 @@ class App(QWidget):
         buttonvbox.addWidget(squatButton)
         pullupButton=ExerciseButton("- - - - Pull-Ups - - - -")
         buttonvbox.addWidget(pullupButton)
-        situpButton=ExerciseButton("- - - - Sit-Ups - - - -")
+        situpButton=ExerciseButton("- - - - Planks - - - -")
         buttonvbox.addWidget(situpButton)
         
         buttonvbox.addLayout(microphonewidgethbox)
