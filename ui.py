@@ -27,6 +27,8 @@ class VideoThread(QThread):
     def __init__(self):
         super().__init__()
         self.started = True
+        self.done = False
+        self.feedback = None
         self.counter = 0
         self.cap = cv2.VideoCapture(0)
         #self.detector = mp.pose.Pose()
@@ -123,23 +125,31 @@ class VideoThread(QThread):
             return
 
         # Check start position
-        if self.started == False:
+        if self.started == False or self.done == True:
             if self.l_hip >= min_s_angle and self.r_hip >= min_s_angle:
                 print("Start position is correct")
                 self.started = True
+                self.done = False
+                if self.feedback != None:
+                    pygame.mixer.music.load(self.feedback)
+                    pygame.mixer.music.play()
+                    self.feedback = None
                 return
 
-            # Error if not straight
-            if self.l_hip < min_s_angle or self.r_hip < min_s_angle:
-                print("Stand straight")
-                self.started = False
-                return
-        else:
+            # # Error if not straight
+            # if self.l_hip < min_s_angle or self.r_hip < min_s_angle:
+            #     print("Stand straight")
+            #     pygame.mixer.music.load('../../../audio/output/lunge_stand_straight.mp3')
+            #     pygame.mixer.music.play()
+            #     self.start = False
+            #     return
+        if self.done == False:
             # Check left lunge
             if self.l_hip <= max_r_angle and self.l_hip >= min_r_angle and self.l_knee >= min_i_angle and self.l_knee <= max_i_angle:
                 if self.r_hip >= min_s_angle and self.r_knee >= min_r_angle and self.r_knee <= max_r_angle:
                     print("Left lunge is correct")
-                    self.started = False
+                    self.feedback = 'audio/output/lunge_is_good.mp3'
+                    self.done = True
                     self.counter += 1
                     return
 
@@ -147,31 +157,26 @@ class VideoThread(QThread):
             if self.r_hip <= max_r_angle and self.r_hip >= min_r_angle and self.r_knee >= min_i_angle and self.r_knee <= max_i_angle:
                 if self.l_hip >= min_s_angle and self.l_knee >= min_r_angle and self.l_knee <= max_r_angle:
                     print("Right lunge is correct")
-                    self.started = False
+                    self.feedback = 'audio/output/lunge_is_good.mp3'
+                    self.done = True
                     self.counter += 1
                     return
-                
+            
             # Error if left foot too front
-            if self.l_hip > min_r_angle and self.l_hip < max_r_angle and self.l_knee > max_i_angle:
-                if self.r_hip > min_s_angle and self.r_knee > min_r_angle and self.r_knee < max_r_angle:
+            if self.l_hip <= max_r_angle+30 and self.l_hip >= min_r_angle-30 and self.l_knee >= min_i_angle-30 and self.l_knee <= max_i_angle+30:
+                if self.r_hip >= min_s_angle-30 and self.r_knee >= min_r_angle-30 and self.r_knee <= max_r_angle+30:
                     print("Left foot is too front")
+                    if self.feedback != 'audio/output/lunge_is_good.mp3': self.feedback = 'audio/output/lunge_too_forward.mp3'
+                    self.started = False
                     return
             
             # Error if right foot too front
-            if self.r_hip > min_r_angle and self.r_hip < max_r_angle and self.r_knee > max_i_angle:
-                if self.l_hip > min_s_angle and self.l_knee > min_r_angle and self.l_knee < max_r_angle:
+            if self.r_hip <= max_r_angle+30 and self.r_hip >= min_r_angle-30 and self.r_knee >= min_i_angle-30 and self.r_knee <= max_i_angle+30:
+                if self.l_hip >= min_s_angle-30 and self.l_knee >= min_r_angle-30 and self.l_knee <= max_r_angle+30:
                     print("Right foot is too front")
+                    if self.feedback != 'audio/output/lunge_is_good.mp3': self.feedback = 'audio/output/lunge_too_forward.mp3'
+                    self.started = False
                     return
-
-            # Check too high (Right Foot Front)
-            if self.l_knee > max_r_angle and self.r_hip > max_r_angle:
-                print("Too high")
-                return
-
-            # Check too high (Left Foot Front)
-            if self.r_knee > max_r_angle and self.l_hip > max_r_angle:
-                print("Too high")
-                return
             
     
     def handle_pullup(self):
@@ -190,29 +195,33 @@ class VideoThread(QThread):
             return
 
         # Check start position
-        if self.started == False:
+        if self.started == False or self.done == True:
             if self.l_e >= min_s_angle and self.l_s >= min_s_angle:
                 if self.r_e >= min_s_angle and self.r_s >= min_s_angle:
                     print("Start position is correct")
                     self.started = True
-                    return
+                    self.done = False
+                    if self.feedback != None:
+                        pygame.mixer.music.load(self.feedback)
+                        pygame.mixer.music.play()
+                        self.feedback = None
+                        return
 
-            # Error if not straight
-            if self.l_e < min_s_angle or self.l_s < min_s_angle or self.r_e < min_s_angle or self.r_s < min_s_angle:
-                    print("Start position is incorrect")
-                    return
-
-        else:
+        if self.done == False:
             if self.l_e <= max_i_angle and self.l_s <= max_i_angle:
                 if self.r_e <= max_i_angle and self.r_s <= max_i_angle:
                     print("Pullup is correct")
-                    self.started = False
+                    self.feedback = 'audio/output/pullup_is_good.mp3'
+                    self.done = True
                     self.counter += 1
                     return
             
             # Not high enough
-            if self.l_e > max_i_angle or self.l_s > max_i_angle or self.r_e > max_i_angle or self.r_s > max_i_angle:
+            if self.l_e <= max_i_angle+40 or self.l_s <= max_i_angle+40 or self.r_e <= max_i_angle+40 or self.r_s <= max_i_angle+40:
+                self.started = False
                 print("Pullup is not high enough")
+                if self.feedback != 'audio/output/pullup_is_good.mp3': # Don't overwrite good feedback
+                    self.feedback = 'audio/output/pullup_not_high_enough.mp3'
                 return
     
 
