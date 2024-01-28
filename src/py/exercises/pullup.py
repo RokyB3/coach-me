@@ -33,7 +33,7 @@ class camera: # class for the camera, so that we can use it to display the camer
             self.results = self.pose.process(self.img)
             self.lms = self.get_LM_positions(self.img)
             if self.results.pose_landmarks:
-                self.handle_lunge()
+                self.handle_pullup()
 
             cv2.imshow("Image", self.img)
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -79,20 +79,19 @@ class camera: # class for the camera, so that we can use it to display the camer
         
         return angle
 
-    def handle_lunge(self):
+    def handle_pullup(self):
         # Constants
-        min_i_angle, max_i_angle = 75, 90
-        min_r_angle, max_r_angle = 80, 100
-        min_s_angle = 160
+        max_i_angle = 75
+        min_s_angle = 140
         # max_b_distance = 0.1
 
         # Angles
-        self.l_hip = self.calculate_2d_angle(11, 23, 25) # Hip angle (left)
-        self.l_knee = self.calculate_2d_angle(23, 25, 27) # Knee angle (left)
-        self.r_hip = self.calculate_2d_angle(12, 24, 26) # Hip angle (right)
-        self.r_knee = self.calculate_2d_angle(24, 26, 28) # Knee angle (right)
+        self.l_e = self.calculate_2d_angle(12, 14, 16) # Hip angle (left)
+        self.l_s = self.calculate_2d_angle(14, 12, 24) # Knee angle (left)
+        self.r_e = self.calculate_2d_angle(11, 13, 15) # Hip angle (right)
+        self.r_s = self.calculate_2d_angle(13, 11, 23) # Knee angle (right)
         
-        if self.l_hip == None or self.l_knee == None or self.r_hip == None or self.r_knee == None:
+        if self.l_e == None or self.l_s == None or self.r_e == None or self.r_s == None:
             return
         
         # print(f"L Hip angle: {self.l_hip}   |   R Hip angle: {self.r_hip}")
@@ -106,53 +105,28 @@ class camera: # class for the camera, so that we can use it to display the camer
 
         # Check start position
         if self.start == False:
-            if self.l_hip >= min_s_angle and self.r_hip >= min_s_angle:
-                print("Start position is correct")
-                self.start = True
-                return
+            if self.l_e >= min_s_angle and self.l_s >= min_s_angle:
+                if self.r_e >= min_s_angle and self.r_s >= min_s_angle:
+                    print("Start position is correct")
+                    self.start = True
+                    return
 
             # Error if not straight
-            if self.l_hip < min_s_angle or self.r_hip < min_s_angle:
-                print("Stand straight")
-                self.start = False
-                return
-        else:
-            # Check left lunge
-            if self.l_hip <= max_r_angle and self.l_hip >= min_r_angle and self.l_knee >= min_i_angle and self.l_knee <= max_i_angle:
-                if self.r_hip >= min_s_angle and self.r_knee >= min_r_angle and self.r_knee <= max_r_angle:
-                    print("Left lunge is correct")
-                    self.start = False
-                    self.counter += 1
+            if self.l_e < min_s_angle or self.l_s < min_s_angle or self.r_e < min_s_angle or self.r_s < min_s_angle:
+                    print("Start position is incorrect")
                     return
 
-            # Check right lunge
-            if self.r_hip <= max_r_angle and self.r_hip >= min_r_angle and self.r_knee >= min_i_angle and self.r_knee <= max_i_angle:
-                if self.l_hip >= min_s_angle and self.l_knee >= min_r_angle and self.l_knee <= max_r_angle:
-                    print("Right lunge is correct")
+        else:
+            if self.l_e <= max_i_angle and self.l_s <= max_i_angle:
+                if self.r_e <= max_i_angle and self.r_s <= max_i_angle:
+                    print("Pullup is correct")
                     self.start = False
                     self.counter += 1
-                    return
-                
-            # Error if left foot too front
-            if self.l_hip > min_r_angle and self.l_hip < max_r_angle and self.l_knee > max_i_angle:
-                if self.r_hip > min_s_angle and self.r_knee > min_r_angle and self.r_knee < max_r_angle:
-                    print("Left foot is too front")
                     return
             
-            # Error if right foot too front
-            if self.r_hip > min_r_angle and self.r_hip < max_r_angle and self.r_knee > max_i_angle:
-                if self.l_hip > min_s_angle and self.l_knee > min_r_angle and self.l_knee < max_r_angle:
-                    print("Right foot is too front")
-                    return
-
-            # Check too high (Right Foot Front)
-            if self.l_knee > max_r_angle and self.r_hip > max_r_angle:
-                print("Too high")
-                return
-
-            # Check too high (Left Foot Front)
-            if self.r_knee > max_r_angle and self.l_hip > max_r_angle:
-                print("Too high")
+            # Not high enough
+            if self.l_e > max_i_angle or self.l_s > max_i_angle or self.r_e > max_i_angle or self.r_s > max_i_angle:
+                print("Pullup is not high enough")
                 return
 
 if __name__ == "__main__":
