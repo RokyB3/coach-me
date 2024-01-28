@@ -2,7 +2,7 @@ from openai import OpenAI
 from pathlib import Path
 import os
 
-client = OpenAI(api_key="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")
+client = OpenAI(api_key="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")
 
 def whisperTranscript(filename): 
   audio_file= open("audio/input/"+filename, "rb")
@@ -16,7 +16,7 @@ def gptResponse(transcript_text):
     response = client.chat.completions.create(
     model="gpt-4-0125-preview",
     messages=[
-        {"role": "user", "content": transcript_text+"Do it in a short paragraph."},
+        {"role": "user", "content": transcript_text+"Do it in 3 sentences or less. If it's not a fitness or exercise related prompt, do not answer and tell us to give a fitness related prompt."},
     ]
     )
     response_message=(response.choices[0].message.content)

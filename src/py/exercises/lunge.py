@@ -5,6 +5,7 @@ import time
 
 class camera: # class for the camera, so that we can use it to display the camera and get all the joints from it
     def __init__(self):
+        self.start = False
         self.cap = cv2.VideoCapture(0)
         #self.detector = mp.pose.Pose()
         self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -100,9 +101,9 @@ class camera: # class for the camera, so that we can use it to display the camer
 
     def handle_lunge(self):
         # Constants
-        min_i_angle, max_i_angle = 75, 90
-        min_r_angle, max_r_angle = 80, 100
-        min_s_angle = 160
+        min_i_angle, max_i_angle = 80, 110
+        min_r_angle, max_r_angle = 80, 110
+        min_s_angle = 110
         max_b_distance = 0.1
         # Landmarks
         self.l_s = self.get_xyz(self.results.pose_landmarks.landmark[self.mpPose.PoseLandmark.LEFT_SHOULDER])
@@ -128,32 +129,54 @@ class camera: # class for the camera, so that we can use it to display the camer
         # print(f"L Hip angle: {self.la0}   |   R Hip angle: {self.ra0}")
         # print(f"L Knee angle: {self.la1}   |   R Knee angle: {self.ra1}")
 
-        # Check if back is straight
-        if self.l_back < max_b_distance and self.r_back < max_b_distance:
-            print("Back is straight")
-        else:
-            print("Back is not straight")
+        # # Check if back is straight
+        # if self.l_back < max_b_distance and self.r_back < max_b_distance:
+        #     print("Back is straight")
+        # else:
+        #     print("Back is not straight")
 
         # Check start position
-        if self.la0 >= min_s_angle and self.ra0 >= min_s_angle:
-            print("Start position is correct")
-        else:
-            print("Start position is incorrect")
+        if self.start:
+            if self.la0 >= min_s_angle and self.ra0 >= min_s_angle:
+                print("Start position is correct")
+                self.start = True
+                return
+        # else:
+        #     print("Start position is incorrect")
         # Check left lunge
         if self.la0 <= max_r_angle and self.la0 >= min_r_angle and self.la1 >= min_i_angle and self.la1 <= max_i_angle:
-            if self.la0 >= min_s_angle and self.la1 >= min_r_angle and self.la1 <= max_r_angle:
+            if self.ra0 >= min_s_angle and self.ra1 >= min_r_angle and self.ra1 <= max_r_angle:
                 print("Left lunge is correct")
-        else:
-            print("Left lunge is incorrect")
+                self.start = False
+                return
+        # else:
+        #     print("Left lunge is incorrect")
 
         # Check right lunge
         if self.ra0 <= max_r_angle and self.ra0 >= min_r_angle and self.ra1 >= min_i_angle and self.ra1 <= max_i_angle:
-            if self.ra0 >= min_s_angle and self.ra1 >= min_r_angle and self.ra1 <= max_r_angle:
+            if self.la0 >= min_s_angle and self.la1 >= min_r_angle and self.la1 <= max_r_angle:
                 print("Right lunge is correct")
-        else:
-            print("Right lunge is incorrect")
+                self.start = False
+                return
+        # else:
+        #     print("Right lunge is incorrect")
 
+        # # Check left foot too front
+        # if self.la0 >= 80 and self.la0 <= 100 and self.la1 >= 100:
+        #     print("Left foot is too front")
+        #     return
+        # else:
+        #     print("Left foot is not too front")
         
+        # # Check right foot too front
+        # if self.ra0 >= 80 and self.ra0 <= 100 and self.ra1 >= 100:
+        #     print("Right foot is too front")
+        #     return
+        # else:
+        #     print("Right foot is not too front")
+        
+        # print(f"L Hip angle: {self.la0}   |   R Hip angle: {self.ra0}")
+        # print(f"L Knee angle: {self.la1}   |   R Knee angle: {self.ra1}")
 
 
         
