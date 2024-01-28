@@ -266,7 +266,7 @@ class VideoThread(QThread):
 
     def check_toes(self): # check if the toes are over the knees
         # check if z coordinate of the knees are greater than the z coordinate of the toes plus some threshold
-        if  self.l_toe[2] - self.l_k[2] > -1 or self.r_toe[2] - self.r_k[2] > -1:
+        if  self.l_toe[2] - self.l_k[2] > 2.5 or self.r_toe[2] - self.r_k[2] > 2.5:
             return True
         else:
             return False
