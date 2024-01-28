@@ -3,6 +3,11 @@
 ## Python imports:
 opencv-python
 mediapipe
+openai
+opencv-python
+pygame
+pyqt5
+soundfile
 
 ## Functionality
 
